@@ -6,7 +6,7 @@ const { Store } = require('../src/database');
 const { Auth, hashPassword, hashToken } = require('../src/auth');
 const { createApp } = require('../src/app');
 let hash;
-const song = { id: 'local:t_test_001', title: 'Canción', artist: 'Artista', duration: 180, albumId: '', artistId: '', album: '', coverUrl: '/api/v1/catalog/artwork/local%3At_test' };
+const song = { id: 'local:t_test_001', title: 'Song', artist: 'Artist', duration: 180, albumId: '', artistId: '', album: '', coverUrl: '/api/v1/catalog/artwork/local%3At_test' };
 const state = (playing = true) => ({ track: song, position: 42, duration: 180, playing, canNext: true });
 async function fixture(t, { publicUrl = '' } = {}) {
   hash ||= await hashPassword('connect-test-only');
@@ -42,7 +42,7 @@ async function fixture(t, { publicUrl = '' } = {}) {
     return { ws, next, send, closed, id: ready.deviceId };
   }
   const controller = token => open(token, { role: 'controller' }, true);
-  const player = (token, key = 'device-test-key', capabilities = ['playQueue']) => open(token, { role: 'player', platform: 'android', name: 'Mi móvil', deviceKey: key, capabilities });
+  const player = (token, key = 'device-test-key', capabilities = ['playQueue']) => open(token, { role: 'player', platform: 'android', name: 'My phone', deviceKey: key, capabilities });
   return { store, auth, server, base, login, open, controller, player, advance: ms => { clock += ms; server.connect.sweep(); } };
 }
 
@@ -65,7 +65,7 @@ test('Connect: browser cookie origin guards, native Bearer, no credentials in qu
   assert.equal((await c.next(m => m.type === 'devices')).items[0].id, p.id);
 });
 
-test('Connect: conserva portadas del origen configurado y descarta URLs ajenas', async t => {
+test('Connect: preserves artwork from the configured origin and discards unrelated URLs', async t => {
   const f = await fixture(t, { publicUrl: 'https://music.example.test/' }), token = await f.login();
   const p = await f.player(token), c = await f.controller(token);
   await c.next(m => m.type === 'devices');
@@ -123,7 +123,7 @@ test('Connect: catalog queues replace the mobile queue across track changes, wit
   await c.next(m => m.type === 'devices'); p.send({ type: 'state', state: state() });
   assert.deepEqual((await c.next(m => m.type === 'devices')).items[0].capabilities, ['playQueue']);
   // Large enough to exceed the old 2 KiB limit for ordinary controls.
-  const queue = Array.from({ length: 50 }, (_, i) => ({ ...song, id: `local:CATALOG_${i}`, title: `Catálogo ${i}`, streamUrl: 'https://ignored.example/audio?ticket=never-forward', token: 'never-forward' }));
+  const queue = Array.from({ length: 50 }, (_, i) => ({ ...song, id: `local:CATALOG_${i}`, title: `Catalog ${i}`, streamUrl: 'https://ignored.example/audio?ticket=never-forward', token: 'never-forward' }));
   p.send({ type: 'state', state: { ...state(), track: { ...song, id: 'local:AUTO_TRANSITION' } } });
   await c.next(m => m.type === 'devices');
   c.send({ type: 'command', id: 'album', deviceId: p.id, action: 'playQueue', queue, index: 7, shuffle: true, trackId: song.id });

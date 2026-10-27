@@ -17,7 +17,7 @@ const PREFIX = '/api/v1';
 function createApp({ store, catalog, media, sources = new SourceRegistry([new LocalSource(catalog, media)]), auth = new Auth(store), logger = console, publicUrl = process.env.PUBLIC_URL || '', connectOptions }) {
   if (publicUrl) {
     const url = new URL(publicUrl);
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash || url.pathname !== '/') throw new Error('PUBLIC_URL debe ser un origen HTTP(S), sin ruta ni credenciales.');
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash || url.pathname !== '/') throw new Error('PUBLIC_URL must be an HTTP(S) origin without a path or credentials.');
     publicUrl = url.origin;
   }
   const expose = value => {
@@ -27,15 +27,15 @@ function createApp({ store, catalog, media, sources = new SourceRegistry([new Lo
       ['coverUrl', 'coverUrlHi', 'imageUrl', 'audioUrl'].includes(key) && typeof item === 'string' && item.startsWith('/api/v1/') ? publicUrl + item : expose(item)]));
   };
   const canonicalTrack = async raw => { reference(raw?.id); return sources.track(raw.id); };
-  const canonicalTracks = async values => { if (!Array.isArray(values)) throw invalid('tracks debe ser un array.'); return mapAsync(values, canonicalTrack); };
+  const canonicalTracks = async values => { if (!Array.isArray(values)) throw invalid('tracks must be an array.'); return mapAsync(values, canonicalTrack); };
   const canonicalPlaylist = async body => { object(body); return { ...body, tracks: await canonicalTracks(body.tracks === undefined ? [] : body.tracks) }; };
   const canonicalImport = async body => {
-    if (body.playlists !== undefined && !Array.isArray(body.playlists)) throw invalid('playlists debe ser un array.');
+    if (body.playlists !== undefined && !Array.isArray(body.playlists)) throw invalid('playlists must be an array.');
     return { ...body, favorites: await canonicalTracks(body.favorites === undefined ? [] : body.favorites), playlists: await mapAsync(body.playlists || [], canonicalPlaylist) };
   };
   const paging = url => {
     const limit = Number(url.searchParams.get('limit') || 200), offset = Number(url.searchParams.get('offset') || 0);
-    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500 || !Number.isSafeInteger(offset) || offset < 0) throw invalid('limit: 1–500; offset: entero no negativo.');
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500 || !Number.isSafeInteger(offset) || offset < 0) throw invalid('limit: 1-500; offset: a nonnegative integer.');
     return { limit, offset };
   };
   const server = http.createServer({ requestTimeout: 60000, headersTimeout: 15000 }, async (req, res) => {
@@ -56,11 +56,11 @@ function createApp({ store, catalog, media, sources = new SourceRegistry([new Lo
       if (path === `${PREFIX}/auth/login`) { method(['POST']); return send(await auth.login(req, res, await readJson(req, 4096))); }
       if (path === `${PREFIX}/auth/logout`) { method(['POST']); return send(auth.logout(req, res)); }
       const artwork = new RegExp(`^${PREFIX}/catalog/artwork/([^/]+)$`).exec(path);
-      // Los clientes cargan portadas sin su cabecera de sesión, como imágenes públicas.
+      // Clients load artwork as public images without session headers.
       if (artwork) { method(['GET', 'HEAD']); return await sources.artwork(req, res, decodeURIComponent(artwork[1])); }
       if (!path.startsWith(`${PREFIX}/`)) throw missing();
       const user = auth.authenticate(req);
-      if (!user) throw new ApiError(401, 'UNAUTHENTICATED', 'Inicia sesión para usar DoubleMusic.');
+      if (!user) throw new ApiError(401, 'UNAUTHENTICATED', 'Sign in to use DoubleMusic.');
       const userId = user.id;
       if (path === `${PREFIX}/auth/me`) { method(['GET']); return send({ user: { id: user.id, username: user.username, role: user.role }, session: { expiresAt: user.expiresAt } }); }
       if (path === `${PREFIX}/auth/password`) {
@@ -79,18 +79,18 @@ function createApp({ store, catalog, media, sources = new SourceRegistry([new Lo
         auth.cookie(req, res, '', 0);
         return send({ ok: true, loginRequired: true });
       }
-      // ---- Administración de cuentas: solo el rol admin, Bearer o cookie.
+      // ---- Account administration: admin role only, using Bearer or cookie authentication.
       if (path === `${PREFIX}/admin/users` || path.startsWith(`${PREFIX}/admin/users/`)) {
-        if (user.role !== 'admin') throw new ApiError(403, 'ADMIN_REQUIRED', 'Sección de administración.');
+        if (user.role !== 'admin') throw new ApiError(403, 'ADMIN_REQUIRED', 'Administrator access required.');
         if (path === `${PREFIX}/admin/users`) {
           if (req.method === 'GET') { method(['GET']); return send(store.adminList()); }
           method(['POST']);
           const body = await readJson(req, 4096);
-          if (typeof body.username !== 'string') throw invalid('Falta el nombre de usuario.');
+          if (typeof body.username !== 'string') throw invalid('Username is required.');
           const role = body.role ?? 'user';
-          if (!['user', 'admin'].includes(role)) throw invalid('El rol debe ser "user" o "admin".');
+          if (!['user', 'admin'].includes(role)) throw invalid('The role must be "user" or "admin".');
           const { hashPassword } = require('./auth');
-          const hash = await hashPassword(body.password);      // valida 8–1024 → 400
+          const hash = await hashPassword(body.password);      // validate 8-1024 characters; otherwise return 400
           return send(store.adminCreate(body.username, hash, role), 201);
         }
         const segs = path.slice(`${PREFIX}/admin/users/`.length).split('/');
@@ -110,8 +110,8 @@ function createApp({ store, catalog, media, sources = new SourceRegistry([new Lo
         if (!action) {
           method(['DELETE']);
           const body = await readJson(req, 1024);
-          if (body.confirm !== username) throw new ApiError(400, 'CONFIRM_REQUIRED', `Envía {"confirm":"${username}"} para confirmar.`);
-          if (target.id === userId) throw invalid('Un administrador no puede borrar su propia cuenta desde la API.');
+          if (body.confirm !== username) throw new ApiError(400, 'CONFIRM_REQUIRED', `Send {"confirm":"${username}"} to confirm.`);
+          if (target.id === userId) throw invalid('Administrators cannot delete their own accounts through the API.');
           if (!store.adminDelete(target.id).ok) throw missing();
           return send({ ok: true, deleted: username });
         }
@@ -120,7 +120,7 @@ function createApp({ store, catalog, media, sources = new SourceRegistry([new Lo
       if (path === `${PREFIX}/library`) {
         method(['GET']);
         const rev = store.rev(userId), known = url.searchParams.get('rev');
-        if (known !== null && !/^\d+$/.test(known)) throw invalid('rev debe ser un entero no negativo.');
+        if (known !== null && !/^\d+$/.test(known)) throw invalid('rev must be a nonnegative integer.');
         const saved = store.savedPlaylists(userId);
         const savedPlaylists = await mapAsync(saved, async p => {
           try { const { tracks, ...current } = await sources.playlist(p.id); return { ...p, ...current, trackCount: tracks.length, available: true }; }
@@ -158,7 +158,7 @@ function createApp({ store, catalog, media, sources = new SourceRegistry([new Lo
         method(['PUT', 'DELETE']); const id = decodeURIComponent(favorite[1]);
         if (req.method === 'DELETE') return send(store.removeFavorite(userId, id));
         const body = await readJson(req);
-        if (body.track?.id !== id) throw invalid('track.id debe coincidir con la ruta.');
+        if (body.track?.id !== id) throw invalid('track.id must match the route.');
         return send(store.addFavorite(userId, await canonicalTrack(body.track)));
       }
       if (path === `${PREFIX}/library/playlists`) { method(['POST']); return send(store.createPlaylist(userId, await canonicalPlaylist(await readJson(req, 5 * 1024 * 1024))), 201); }
@@ -186,16 +186,16 @@ function createApp({ store, catalog, media, sources = new SourceRegistry([new Lo
       }
       if (path === `${PREFIX}/sources` || path === `${PREFIX}/providers`) { method(['GET']); return send({ defaultSource: sources.defaultSource, configuration: sources.configuration, items: await sources.health() }); }
       if (path === `${PREFIX}/admin/scan`) {
-        if (!catalog) throw new ApiError(404, 'LOCAL_SOURCE_DISABLED', 'No hay una biblioteca local configurada.');
+        if (!catalog) throw new ApiError(404, 'LOCAL_SOURCE_DISABLED', 'No local library is configured.');
         if (user.role !== 'admin') throw new ApiError(403, 'ADMIN_REQUIRED');
         method(['GET', 'POST']);
         if (req.method === 'POST' && !catalog.scanning) {
           server.scanError = null;
-          catalog.scan().catch(() => { server.scanError = 'No se pudo completar el escaneo.'; logger.error('[Catalog] Error al actualizar el índice.'); });
+          catalog.scan().catch(() => { server.scanError = 'Could not complete the scan.'; logger.error('[Catalog] Failed to update the index.'); });
         }
         return send({ scanning: !!catalog.scanning, lastScan: catalog.lastScan, error: server.scanError || null }, req.method === 'POST' ? 202 : 200);
       }
-      if (path === `${PREFIX}/catalog/search`) { method(['GET']); const query = url.searchParams.get('q') || ''; if (query.length > 300) throw invalid('Búsqueda demasiado larga.'); return send(await sources.search(query, sourceId)); }
+      if (path === `${PREFIX}/catalog/search`) { method(['GET']); const query = url.searchParams.get('q') || ''; if (query.length > 300) throw invalid('Search query is too long.'); return send(await sources.search(query, sourceId)); }
       if (path === `${PREFIX}/catalog/featured`) { method(['GET']); return send(await sources.featured(store.following(userId), sourceId)); }
       if (path === `${PREFIX}/catalog/daily` || path === `${PREFIX}/catalog/discovery`) { method(['GET']); return send(await sources.shelves(sourceId)); }
       const listing = new RegExp(`^${PREFIX}/catalog/(albums|artists|tracks|playlists)$`).exec(path);
@@ -237,7 +237,7 @@ function createApp({ store, catalog, media, sources = new SourceRegistry([new Lo
       if (status >= 500) logger.error(`[API] ${requestId} ${error.code || error.name}`);
       if (status === 413) res.setHeader('Connection', 'close');
       json(res, status, { error: error instanceof ApiError ? error.code : status === 400 ? 'INVALID_PATH' : status === 404 ? 'NOT_FOUND' : 'INTERNAL_ERROR',
-        message: error instanceof ApiError ? error.message : 'No se pudo completar la solicitud.', requestId, ...(error instanceof ApiError && error.details ? error.details : {}) });
+        message: error instanceof ApiError ? error.message : 'Could not complete the request.', requestId, ...(error instanceof ApiError && error.details ? error.details : {}) });
     }
   });
   server.on('clientError', (_error, socket) => { if (socket.writable) socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n'); });

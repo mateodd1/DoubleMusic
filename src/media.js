@@ -12,9 +12,9 @@ async function serveFile(req, res, file, type, { publicCache = false } = {}) {
   const handle = await fs.open(file, 'r');
   try {
     const stat = await handle.stat(), size = stat.size;
-    // La actualización de acceso de la caché conserva mtime con precisión de
-    // Date (milisegundos). Normalizar aquí evita cambiar el ETag por perder
-    // fracciones de milisegundo tras la primera petición de una conversión.
+    // Updating cache access time preserves mtime at Date precision
+    // (milliseconds). Normalize it here to keep the ETag stable when losing
+    // sub-millisecond precision after the first request for a conversion.
     const etag = `"${hash(`${stat.ino}:${size}:${stat.mtime.getTime()}`).slice(0, 32)}"`;
     res.setHeader('Content-Type', type || MIME[path.extname(file).toLowerCase()] || 'application/octet-stream');
     res.setHeader('Accept-Ranges', 'bytes'); res.setHeader('ETag', etag);
@@ -43,18 +43,18 @@ async function serveFile(req, res, file, type, { publicCache = false } = {}) {
 
 function audioOptions(params) {
   const quality = params.get('quality') || 'original';
-  if (!['original', '320', '192', '128'].includes(quality)) throw invalid('Calidad inválida.');
+  if (!['original', '320', '192', '128'].includes(quality)) throw invalid('Invalid quality.');
   const layout = params.get('layout');
-  if (layout && !['1', '2'].includes(layout)) throw invalid('Layout inválido.');
+  if (layout && !['1', '2'].includes(layout)) throw invalid('Invalid layout.');
   const format = params.get('format') || (layout === '2' || quality !== 'original' ? 'mp4' : 'original');
-  if (!['original', 'mp4', 'mp3'].includes(format) || (format === 'original' && quality !== 'original')) throw invalid('Formato incompatible con la calidad.');
+  if (!['original', 'mp4', 'mp3'].includes(format) || (format === 'original' && quality !== 'original')) throw invalid('Format is incompatible with the requested quality.');
   return { quality, format };
 }
 
 class LocalMedia {
   constructor(catalog, { cacheDir = path.join(catalog.dataDir, 'cache'), maxBytes = Number(process.env.CACHE_MAX_MB || 2048) * 1024 * 1024 } = {}) {
     this.catalog = catalog; this.cacheDir = path.resolve(cacheDir); this.maxBytes = maxBytes;
-    if (!Number.isFinite(maxBytes) || maxBytes < 0) throw new Error('CACHE_MAX_MB debe ser un número no negativo.');
+    if (!Number.isFinite(maxBytes) || maxBytes < 0) throw new Error('CACHE_MAX_MB must be a nonnegative number.');
     this.pending = new Map(); this.work = limiter(2, 32);
   }
   async init() {
@@ -64,7 +64,7 @@ class LocalMedia {
   }
   async cached(key, extension, generate) {
     const file = path.join(this.cacheDir, `${key}${extension}`);
-    try { const stat = await fs.stat(file); await fs.utimes(file, new Date(), stat.mtime); return file; } catch { /* Se genera la variante. */ }
+    try { const stat = await fs.stat(file); await fs.utimes(file, new Date(), stat.mtime); return file; } catch { /* Generate the variant. */ }
     if (this.pending.has(file)) return this.pending.get(file);
     const promise = this.work(async () => {
       const temp = path.join(this.cacheDir, `${key}-${randomUUID()}.tmp`);
@@ -81,7 +81,7 @@ class LocalMedia {
     for (const name of await fs.readdir(this.cacheDir)) {
       if (name.endsWith('.tmp')) continue;
       const file = path.join(this.cacheDir, name);
-      try { const stat = await fs.stat(file); if (stat.isFile()) files.push({ file, size: stat.size, time: stat.atimeMs }); } catch { /* Otra petición puede haberlo retirado. */ }
+      try { const stat = await fs.stat(file); if (stat.isFile()) files.push({ file, size: stat.size, time: stat.atimeMs }); } catch { /* Another request may have removed the file. */ }
     }
     let size = files.reduce((sum, f) => sum + f.size, 0);
     for (const entry of files.sort((a, b) => a.time - b.time)) {

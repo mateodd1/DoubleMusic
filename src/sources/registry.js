@@ -4,15 +4,15 @@ const { ApiError, invalid } = require('../errors');
 
 class SourceRegistry {
   constructor(sources, defaultSource = sources.some(source => source.id === 'local') ? 'local' : sources[0]?.id, configuration) {
-    if (sources.length > 16 || new Set(sources.map(s => s.id)).size !== sources.length) throw new Error('Configura hasta 16 fuentes activas con ids únicos.');
-    if (sources.some(source => source.id === 'all')) throw new Error('El id all se reserva para consultas agregadas.');
+    if (sources.length > 16 || new Set(sources.map(s => s.id)).size !== sources.length) throw new Error('Configure up to 16 active sources with unique IDs.');
+    if (sources.some(source => source.id === 'all')) throw new Error('The ID all is reserved for aggregate queries.');
     this.sources = new Map(sources.map(source => [source.id, source]));
-    if (sources.length && !this.sources.has(defaultSource)) throw new Error('La fuente predeterminada no está configurada.');
+    if (sources.length && !this.sources.has(defaultSource)) throw new Error('The default source is not configured.');
     this.defaultSource = sources.length ? defaultSource : null;
     this.configuration = configuration || { library: { enabled: this.sources.has('local') }, external: { enabled: sources.some(source => source.type === 'http') } };
   }
   info() { return [...this.sources.values()].map(({ id, name, type }) => ({ id, name, type })); }
-  source(id) { const source = this.sources.get(id); if (!source) throw new ApiError(404, 'SOURCE_NOT_FOUND', 'La fuente no está configurada.'); return source; }
+  source(id) { const source = this.sources.get(id); if (!source) throw new ApiError(404, 'SOURCE_NOT_FOUND', 'The source is not configured.'); return source; }
   resource(id) { return this.source(reference(id).provider); }
   selection(id) { return id === 'all' ? [...this.sources.values()] : !id && !this.defaultSource ? [] : [this.source(id || this.defaultSource)]; }
   async health() {
@@ -22,7 +22,7 @@ class SourceRegistry {
     })));
   }
   list(kind, paging, sourceId) {
-    if (sourceId === 'all') throw invalid('Las listas paginadas requieren una fuente concreta; usa /sources para enumerarlas.');
+    if (sourceId === 'all') throw invalid('Paginated lists require a specific source; use /sources to list sources.');
     if (!sourceId && !this.defaultSource) return { items: [], total: 0, ...paging };
     return this.source(sourceId || this.defaultSource).list(kind, paging);
   }
@@ -43,7 +43,7 @@ class SourceRegistry {
     return result;
   }
   async featured(following = [], sourceId) {
-    const result = { albums: { title: 'Tu música', items: [] }, artists: { title: 'Artistas', items: [] }, playlists: { title: 'Playlists', items: [] }, sources: [] };
+    const result = { albums: { title: 'Your music', items: [] }, artists: { title: 'Artists', items: [] }, playlists: { title: 'Playlists', items: [] }, sources: [] };
     const responses = await Promise.all(this.selection(sourceId).map(async source => {
       try { return { source, data: await source.featured() }; }
       catch { return { source, data: null }; }
@@ -57,7 +57,7 @@ class SourceRegistry {
     for (const kind of ['albums', 'artists', 'playlists']) result[kind].items = result[kind].items.slice(0, 200);
     result.pools = result.playlists;
     const ids = new Set(following.map(artist => artist.id));
-    result.followed = { title: 'Tus artistas', items: result.albums.items.filter(album => ids.has(album.artistId)) };
+    result.followed = { title: 'Followed artists', items: result.albums.items.filter(album => ids.has(album.artistId)) };
     return result;
   }
   async shelves(sourceId) {

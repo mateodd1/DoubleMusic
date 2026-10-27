@@ -1,13 +1,20 @@
 {
   "version": 1,
-  "library": { "enabled": true },
-  "external": { "enabled": true },
+  "library": {
+    "enabled": true
+  },
+  "external": {
+    "enabled": true
+  },
   "defaultSource": "local",
   "sources": [
-    { "id": "local", "type": "local" },
+    {
+      "id": "local",
+      "type": "local"
+    },
     {
       "id": "example",
-      "name": "Mi módulo",
+      "name": "My module",
       "type": "http",
       "origin": "http://example-module:4000",
       "tokenFile": "/run/secrets/module-token"

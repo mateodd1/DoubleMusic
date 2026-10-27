@@ -2,7 +2,7 @@
 
 class LocalSource {
   constructor(catalog, media) {
-    this.id = 'local'; this.name = 'Biblioteca local'; this.type = 'local';
+    this.id = 'local'; this.name = 'Local library'; this.type = 'local';
     this.catalog = catalog; this.media = media;
   }
   async health() { return { available: true, capabilities: { browse: true, search: true, audio: true, artwork: true, lyrics: true } }; }

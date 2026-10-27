@@ -9,7 +9,7 @@ const hashToken = token => crypto.createHash('sha256').update(token).digest('hex
 const OPTIONS = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 
 async function hashPassword(password) {
-  if (typeof password !== 'string' || password.length < 8 || password.length > 1024) throw invalid('La contraseña debe tener de 8 a 1024 caracteres.');
+  if (typeof password !== 'string' || password.length < 8 || password.length > 1024) throw invalid('The password must contain 8 to 1024 characters.');
   const salt = crypto.randomBytes(16);
   const key = await derive(password, salt, 64, OPTIONS);
   return `scrypt$${OPTIONS.N}$${OPTIONS.r}$${OPTIONS.p}$${salt.toString('base64')}$${key.toString('base64')}`;
@@ -52,7 +52,7 @@ class Auth {
   }
   async login(req, res, body) {
     const username = typeof body.username === 'string' ? body.username.trim() : '';
-    if (!/^[A-Za-z0-9_.-]{1,64}$/.test(username) || typeof body.password !== 'string' || body.password.length > 1024 || !['cookie', 'bearer'].includes(body.transport || 'cookie')) throw invalid('Credenciales o transporte inválidos.');
+    if (!/^[A-Za-z0-9_.-]{1,64}$/.test(username) || typeof body.password !== 'string' || body.password.length > 1024 || !['cookie', 'bearer'].includes(body.transport || 'cookie')) throw invalid('Invalid credentials or transport.');
     const now = this.now();
     // Account scope prevents one browser behind the reverse proxy from
     // blocking every other account. Bounded KDF concurrency protects Node.
@@ -60,7 +60,7 @@ class Auth {
     const hit = this.attempts.get(key);
     if ((hit && hit.until > now && hit.count >= 8) || this.inflight >= 8) {
       res.setHeader('Retry-After', '60');
-      throw new ApiError(429, 'LOGIN_BLOCKED', 'Demasiados intentos. Espera un minuto.');
+      throw new ApiError(429, 'LOGIN_BLOCKED', 'Too many attempts. Wait one minute.');
     }
     const counter = hit && hit.until > now ? hit : { count: 0, until: now + 60000 };
     counter.count++; this.attempts.set(key, counter);
@@ -72,7 +72,7 @@ class Auth {
       const valid = await verifyPassword(body.password, user?.hash || await this.dummy);
       // Password changes or deletion while scrypt was running revoke this login too.
       const current = user && this.store.get('SELECT * FROM users WHERE id=?', user.id);
-      if (!valid || !current || current.hash !== user.hash) throw new ApiError(401, 'INVALID_CREDENTIALS', 'Usuario o contraseña incorrectos.');
+      if (!valid || !current || current.hash !== user.hash) throw new ApiError(401, 'INVALID_CREDENTIALS', 'Incorrect username or password.');
       this.attempts.delete(key);
       const token = crypto.randomBytes(32).toString('base64url'), expiresAt = this.now() + TTL;
       this.store.transaction(() => {

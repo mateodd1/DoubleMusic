@@ -21,7 +21,7 @@ async function localFile(root, file) {
 }
 async function run(binary, args, { timeout = 30000, maxBuffer = 4 * 1024 * 1024 } = {}) {
   try { return await exec(binary, args, { timeout, maxBuffer, windowsHide: true, encoding: 'utf8' }); }
-  catch { throw new ApiError(422, 'MEDIA_PROCESS_FAILED', 'No se pudo procesar el archivo de audio.'); }
+  catch { throw new ApiError(422, 'MEDIA_PROCESS_FAILED', 'Could not process the audio file.'); }
 }
 async function probe(file) {
   const { stdout } = await run('ffprobe', ['-v', 'error', '-protocol_whitelist', 'file,pipe', '-format_whitelist', INPUT_FORMATS, '-show_format', '-show_streams', '-of', 'json', file]);
@@ -36,7 +36,7 @@ function limiter(concurrency = 2, capacity = 64) {
     Promise.resolve().then(fn).then(resolve, reject).finally(() => { active--; next(); });
   };
   return fn => {
-    if (queue.length >= capacity) return Promise.reject(new ApiError(503, 'MEDIA_BUSY', 'El servidor está ocupado. Reintenta en unos segundos.'));
+    if (queue.length >= capacity) return Promise.reject(new ApiError(503, 'MEDIA_BUSY', 'The server is busy. Try again in a few seconds.'));
     return new Promise((resolve, reject) => { queue.push({ fn, resolve, reject }); next(); });
   };
 }

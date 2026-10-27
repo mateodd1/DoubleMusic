@@ -78,7 +78,7 @@ class Store {
   close() { this.db.close(); }
   rev(userId) {
     const user = this.get('SELECT rev FROM users WHERE id=?', userId);
-    if (!user) throw new ApiError(401, 'UNAUTHENTICATED', 'Inicia sesión.');
+    if (!user) throw new ApiError(401, 'UNAUTHENTICATED', 'Sign in.');
     return user.rev;
   }
   change(userId, fn) {
@@ -90,7 +90,7 @@ class Store {
     });
   }
   createUser(username, hash, role = 'user') {
-    if (!/^[A-Za-z0-9_.-]{4,64}$/.test(username) || !['user', 'admin'].includes(role)) throw invalid('Usuario inválido: 4–64 caracteres, letras, números, ._-');
+    if (!/^[A-Za-z0-9_.-]{4,64}$/.test(username) || !['user', 'admin'].includes(role)) throw invalid('Invalid username: use 4-64 letters, digits, or ._- characters.');
     if (this.get('SELECT id FROM users WHERE username=?', username)) throw new ApiError(409, 'USERNAME_TAKEN');
     const id = randomUUID();
     this.run('INSERT INTO users (id, username, hash, role) VALUES (?,?,?,?)', id, username, hash, role);
@@ -209,7 +209,7 @@ class Store {
     return this.change(userId, () => { this.owned(userId, id); this.run('DELETE FROM playlists WHERE id=?', id); return { changed: true }; });
   }
   addTracks(userId, id, values) {
-    if (!Array.isArray(values)) throw invalid('tracks debe ser un array.');
+    if (!Array.isArray(values)) throw invalid('tracks must be an array.');
     const incoming = model.tracks(values);
     return this.change(userId, () => {
       this.owned(userId, id);
@@ -231,11 +231,11 @@ class Store {
   reorder(userId, id, body) {
     return this.change(userId, () => {
       this.owned(userId, id);
-      if (body.expectedRev !== undefined && body.expectedRev !== this.rev(userId)) throw new ApiError(409, 'REVISION_CONFLICT', 'Recarga la biblioteca antes de ordenar.', { playlist: this.playlist(userId, id) });
+      if (body.expectedRev !== undefined && body.expectedRev !== this.rev(userId)) throw new ApiError(409, 'REVISION_CONFLICT', 'Reload the library before reordering.', { playlist: this.playlist(userId, id) });
       const current = this.all('SELECT track_id FROM playlist_tracks WHERE playlist_id=? ORDER BY position', id).map(row => row.track_id);
       const values = body.trackIds, known = new Set(current);
       if (!Array.isArray(values) || values.length !== current.length || new Set(values).size !== values.length || values.some(id => !known.has(id))) {
-        throw new ApiError(409, 'ORDER_MISMATCH', 'La lista de pistas ha cambiado.', { playlist: this.playlist(userId, id) });
+        throw new ApiError(409, 'ORDER_MISMATCH', 'The track list has changed.', { playlist: this.playlist(userId, id) });
       }
       const changed = values.some((id, i) => id !== current[i]);
       if (changed) {
@@ -247,7 +247,7 @@ class Store {
   }
   follow(userId, id, body) {
     model.reference(id); model.object(body);
-    if (typeof body.name !== 'string' || !body.name.trim() || body.name.length > 300) throw invalid('El artista necesita nombre.');
+    if (typeof body.name !== 'string' || !body.name.trim() || body.name.length > 300) throw invalid('An artist name is required.');
     const name = body.name.trim(), image = typeof body.imageUrl === 'string' ? body.imageUrl : '';
     if (image) model.localImage(image);
     return this.change(userId, () => {
@@ -264,14 +264,14 @@ class Store {
   }
   importLibrary(userId, body) {
     model.object(body);
-    if (!['ios', 'android', 'web'].includes(body.source) || typeof body.deviceId !== 'string' || !/^[A-Za-z0-9_.-]{1,64}$/.test(body.deviceId)) throw invalid('source o deviceId inválidos.');
+    if (!['ios', 'android', 'web'].includes(body.source) || typeof body.deviceId !== 'string' || !/^[A-Za-z0-9_.-]{1,64}$/.test(body.deviceId)) throw invalid('Invalid source or deviceId.');
     if (this.get('SELECT 1 FROM imports WHERE user_id=? AND source=? AND device_id=?', userId, body.source, body.deviceId)) return { rev: this.rev(userId), alreadyImported: true, favoritesAdded: 0, playlistsCreated: 0 };
     const favorites = model.tracks(body.favorites);
-    if (body.playlists !== undefined && !Array.isArray(body.playlists)) throw invalid('playlists debe ser un array.');
+    if (body.playlists !== undefined && !Array.isArray(body.playlists)) throw invalid('playlists must be an array.');
     const ids = new Set();
     const playlists = (body.playlists || []).map(p => {
       model.object(p);
-      if (typeof p.id !== 'string' || !/^[A-Za-z0-9_.-]{1,120}$/.test(p.id) || ids.has(p.id)) throw invalid('Ids locales de playlists inválidos o repetidos.');
+      if (typeof p.id !== 'string' || !/^[A-Za-z0-9_.-]{1,120}$/.test(p.id) || ids.has(p.id)) throw invalid('Invalid or duplicate local playlist IDs.');
       ids.add(p.id);
       return { id: p.id, name: model.name(p.name), tracks: model.tracks(p.tracks) };
     });
@@ -300,7 +300,7 @@ class Store {
       return { changed: true, alreadyImported: false, favoritesAdded: incoming.length, playlistsCreated: created };
     });
   }
-  // ---- Administración de cuentas (solo rol 'admin'; se comprueba en app.js) ----
+  // ---- Account administration (admin role only; checked in app.js) ----
   adminList() {
     return { items: this.all(`SELECT u.id, u.username, u.role,
       (SELECT count(*) FROM sessions s WHERE s.user_id=u.id) AS sessions,
@@ -325,8 +325,8 @@ class Store {
     return { ok: true, sessionsRevoked: this.run('DELETE FROM sessions WHERE user_id=?', userId).changes };
   }
   adminDelete(userId) {
-    // Un solo statement: ON DELETE CASCADE retira sesiones, favoritos,
-    // playlists (y sus pistas), seguidos y marcas de importación.
+    // One statement: ON DELETE CASCADE removes sessions, favorites,
+    // playlists and their tracks, followed artists, and import markers.
     return { ok: this.run('DELETE FROM users WHERE id=?', userId).changes > 0 };
   }
 }

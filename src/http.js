@@ -8,14 +8,14 @@ function json(res, status, data) {
   res.end(status === 304 ? undefined : JSON.stringify(data));
 }
 function readJson(req, limit = 256 * 1024) {
-  if (String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase() !== 'application/json') return Promise.reject(invalid('Se requiere Content-Type: application/json.'));
-  if (Number(req.headers['content-length']) > limit) { req.resume(); return Promise.reject(new ApiError(413, 'TOO_LARGE', 'Cuerpo demasiado grande.')); }
+  if (String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase() !== 'application/json') return Promise.reject(invalid('Content-Type: application/json is required.'));
+  if (Number(req.headers['content-length']) > limit) { req.resume(); return Promise.reject(new ApiError(413, 'TOO_LARGE', 'Request body is too large.')); }
   return new Promise((resolve, reject) => {
     const parts = []; let bytes = 0, done = false;
     req.on('data', chunk => {
       if (done) return;
       bytes += chunk.length;
-      if (bytes > limit) { done = true; parts.length = 0; reject(new ApiError(413, 'TOO_LARGE', 'Cuerpo demasiado grande.')); return; }
+      if (bytes > limit) { done = true; parts.length = 0; reject(new ApiError(413, 'TOO_LARGE', 'Request body is too large.')); return; }
       parts.push(chunk);
     });
     req.on('end', () => {
@@ -25,7 +25,7 @@ function readJson(req, limit = 256 * 1024) {
         const data = JSON.parse(Buffer.concat(parts).toString('utf8'));
         if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error();
         resolve(data);
-      } catch { reject(invalid('Se requiere un objeto JSON válido.')); }
+      } catch { reject(invalid('A valid JSON object is required.')); }
     });
     req.on('aborted', () => { if (!done) { done = true; reject(new ApiError(400, 'REQUEST_ABORTED')); } });
     req.on('error', error => { if (!done) { done = true; reject(error); } });

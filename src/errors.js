@@ -9,6 +9,6 @@ class ApiError extends Error {
   }
 }
 const invalid = (message) => new ApiError(400, 'INVALID_BODY', message);
-const missing = () => new ApiError(404, 'NOT_FOUND', 'No existe ese recurso.');
-const limit = () => new ApiError(413, 'LIMIT_REACHED', 'Se ha alcanzado el límite de la biblioteca.');
+const missing = () => new ApiError(404, 'NOT_FOUND', 'Resource not found.');
+const limit = () => new ApiError(413, 'LIMIT_REACHED', 'The library limit has been reached.');
 module.exports = { ApiError, invalid, missing, limit };

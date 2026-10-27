@@ -3,7 +3,7 @@
   "info": {
     "title": "DoubleMusic Module API",
     "version": "1.0.0",
-    "description": "Contrato que implementan módulos HTTP opcionales, en cualquier lenguaje. Los ids son propios del módulo, sin prefijo. DoubleMusic añade el namespace, autentica a los clientes y conserva sus bibliotecas. El token de módulo es independiente de las cuentas de usuario."
+    "description": "Contract implemented by optional HTTP modules in any language. IDs belong to the module and have no prefix. DoubleMusic adds the namespace, authenticates clients, and stores personal libraries. The module token is independent of user accounts."
   },
   "servers": [
     {
@@ -18,7 +18,7 @@
   "paths": {
     "/": {
       "get": {
-        "summary": "Identidad, versión y capacidades del módulo",
+        "summary": "Module identity, version, and capabilities",
         "responses": {
           "200": {
             "description": "OK",
@@ -45,7 +45,7 @@
     },
     "/catalog/tracks": {
       "get": {
-        "summary": "Enumerar tracks",
+        "summary": "List tracks",
         "responses": {
           "200": {
             "description": "OK",
@@ -95,7 +95,7 @@
     },
     "/catalog/tracks/{id}": {
       "get": {
-        "summary": "Consultar tracks",
+        "summary": "Get a track",
         "responses": {
           "200": {
             "description": "OK",
@@ -132,7 +132,7 @@
     },
     "/catalog/albums": {
       "get": {
-        "summary": "Enumerar albums",
+        "summary": "List albums",
         "responses": {
           "200": {
             "description": "OK",
@@ -182,7 +182,7 @@
     },
     "/catalog/albums/{id}": {
       "get": {
-        "summary": "Consultar albums",
+        "summary": "Get an album",
         "responses": {
           "200": {
             "description": "OK",
@@ -219,7 +219,7 @@
     },
     "/catalog/artists": {
       "get": {
-        "summary": "Enumerar artists",
+        "summary": "List artists",
         "responses": {
           "200": {
             "description": "OK",
@@ -269,7 +269,7 @@
     },
     "/catalog/artists/{id}": {
       "get": {
-        "summary": "Consultar artists",
+        "summary": "Get an artist",
         "responses": {
           "200": {
             "description": "OK",
@@ -306,7 +306,7 @@
     },
     "/catalog/playlists": {
       "get": {
-        "summary": "Enumerar playlists",
+        "summary": "List playlists",
         "responses": {
           "200": {
             "description": "OK",
@@ -356,7 +356,7 @@
     },
     "/catalog/playlists/{id}": {
       "get": {
-        "summary": "Consultar playlists",
+        "summary": "Get a playlist",
         "responses": {
           "200": {
             "description": "OK",
@@ -393,7 +393,7 @@
     },
     "/catalog/search": {
       "get": {
-        "summary": "Buscar en el catálogo del módulo",
+        "summary": "Search the module catalog",
         "responses": {
           "200": {
             "description": "OK",
@@ -431,7 +431,7 @@
     },
     "/catalog/featured": {
       "get": {
-        "summary": "Selección del catálogo; arrays de hasta 200 elementos",
+        "summary": "Featured catalog; arrays contain up to 200 items",
         "responses": {
           "200": {
             "description": "OK",
@@ -458,7 +458,7 @@
     },
     "/catalog/artists/{id}/tracks": {
       "get": {
-        "summary": "Pistas de un artista",
+        "summary": "Tracks by an artist",
         "responses": {
           "200": {
             "description": "OK",
@@ -516,7 +516,7 @@
     },
     "/audio/{id}": {
       "get": {
-        "summary": "Audio preparado en el servidor",
+        "summary": "Server-prepared audio",
         "parameters": [
           {
             "name": "id",
@@ -668,7 +668,7 @@
             }
           },
           "206": {
-            "description": "Rango de bytes",
+            "description": "Byte range",
             "content": {
               "audio/mp4": {
                 "schema": {
@@ -735,7 +735,7 @@
             }
           },
           "304": {
-            "description": "Sin cambios",
+            "description": "Not modified",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -794,7 +794,7 @@
             }
           },
           "416": {
-            "description": "Rango no válido",
+            "description": "Invalid range",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -921,7 +921,7 @@
         }
       },
       "head": {
-        "summary": "Audio preparado en el servidor",
+        "summary": "Server-prepared audio",
         "parameters": [
           {
             "name": "id",
@@ -1073,7 +1073,7 @@
             }
           },
           "206": {
-            "description": "Rango de bytes",
+            "description": "Byte range",
             "content": {
               "audio/mp4": {
                 "schema": {
@@ -1140,7 +1140,7 @@
             }
           },
           "304": {
-            "description": "Sin cambios",
+            "description": "Not modified",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -1199,7 +1199,7 @@
             }
           },
           "416": {
-            "description": "Rango no válido",
+            "description": "Invalid range",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -1328,7 +1328,7 @@
     },
     "/artwork/{id}": {
       "get": {
-        "summary": "Imagen binaria local al módulo",
+        "summary": "Binary image served by the module",
         "parameters": [
           {
             "name": "id",
@@ -1408,7 +1408,7 @@
             }
           },
           "206": {
-            "description": "Rango de bytes",
+            "description": "Byte range",
             "content": {
               "image/png": {
                 "schema": {
@@ -1451,7 +1451,7 @@
             }
           },
           "304": {
-            "description": "Sin cambios",
+            "description": "Not modified",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -1486,7 +1486,7 @@
             }
           },
           "416": {
-            "description": "Rango no válido",
+            "description": "Invalid range",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -1565,7 +1565,7 @@
         }
       },
       "head": {
-        "summary": "Imagen binaria local al módulo",
+        "summary": "Binary image served by the module",
         "parameters": [
           {
             "name": "id",
@@ -1645,7 +1645,7 @@
             }
           },
           "206": {
-            "description": "Rango de bytes",
+            "description": "Byte range",
             "content": {
               "image/png": {
                 "schema": {
@@ -1688,7 +1688,7 @@
             }
           },
           "304": {
-            "description": "Sin cambios",
+            "description": "Not modified",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -1723,7 +1723,7 @@
             }
           },
           "416": {
-            "description": "Rango no válido",
+            "description": "Invalid range",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -1804,7 +1804,7 @@
     },
     "/lyrics/{id}": {
       "get": {
-        "summary": "Letra en TTML",
+        "summary": "TTML lyrics",
         "parameters": [
           {
             "name": "id",
@@ -1828,7 +1828,7 @@
             }
           },
           "204": {
-            "description": "Sin letra disponible"
+            "description": "No lyrics available"
           },
           "default": {
             "description": "Error",
@@ -1849,7 +1849,7 @@
       "moduleToken": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Secreto compartido entre DoubleMusic y el módulo. No es una sesión de usuario."
+        "description": "Secret shared between DoubleMusic and the module. This is not a user session."
       }
     },
     "schemas": {

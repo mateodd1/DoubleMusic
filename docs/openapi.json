@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "DoubleMusic Client API",
-    "version": "1.2.0",
-    "description": "API de biblioteca musical local para clientes móviles. library.enabled activa la biblioteca local (true por defecto); external.enabled permite conexiones externas opcionales (false por defecto). Se configuran en SOURCES_FILE y se aplican al reiniciar. La navegación utiliza la fuente predeterminada, normalmente local. Las cuentas se conservan al desactivar las fuentes. Con ambas partes desactivadas el catálogo queda vacío y defaultSource es null."
+    "version": "1.2.1",
+    "description": "Local music library API for mobile clients. library.enabled enables the local library (true by default); external.enabled allows optional external connections (false by default). Configure them in SOURCES_FILE and restart to apply changes. Browsing uses the default source, normally local. Accounts are preserved when sources are disabled. With both features disabled, the catalog is empty and defaultSource is null."
   },
   "servers": [
     {
@@ -21,7 +21,7 @@
   "paths": {
     "/health": {
       "get": {
-        "summary": "Salud del core y último escaneo local",
+        "summary": "Core health and last local scan",
         "responses": {
           "200": {
             "description": "OK",
@@ -49,7 +49,7 @@
     },
     "/api/v1": {
       "get": {
-        "summary": "Versión, fuentes y capacidades",
+        "summary": "Version, sources, and capabilities",
         "responses": {
           "200": {
             "description": "OK",
@@ -77,7 +77,7 @@
     },
     "/api/v1/openapi.json": {
       "get": {
-        "summary": "Contrato OpenAPI",
+        "summary": "OpenAPI contract",
         "responses": {
           "200": {
             "description": "OK",
@@ -105,7 +105,7 @@
     },
     "/api/v1/modules/openapi.json": {
       "get": {
-        "summary": "Contrato OpenAPI",
+        "summary": "OpenAPI contract",
         "responses": {
           "200": {
             "description": "OK",
@@ -133,7 +133,7 @@
     },
     "/api/v1/auth/login": {
       "post": {
-        "summary": "Iniciar sesión",
+        "summary": "Sign in",
         "responses": {
           "200": {
             "description": "OK",
@@ -192,7 +192,7 @@
     },
     "/api/v1/auth/me": {
       "get": {
-        "summary": "Identidad y expiración de sesión",
+        "summary": "Identity and session expiration",
         "responses": {
           "200": {
             "description": "OK",
@@ -219,7 +219,7 @@
     },
     "/api/v1/auth/logout": {
       "post": {
-        "summary": "Revocar sesión actual",
+        "summary": "Revoke the current session",
         "responses": {
           "200": {
             "description": "OK",
@@ -252,7 +252,7 @@
     },
     "/api/v1/auth/password": {
       "put": {
-        "summary": "Cambiar contraseña y revocar sesiones",
+        "summary": "Change password and revoke sessions",
         "responses": {
           "200": {
             "description": "OK",
@@ -313,7 +313,7 @@
     },
     "/api/v1/sources": {
       "get": {
-        "summary": "Fuentes configuradas y disponibilidad",
+        "summary": "Configured sources and availability",
         "responses": {
           "200": {
             "description": "OK",
@@ -340,7 +340,7 @@
     },
     "/api/v1/providers": {
       "get": {
-        "summary": "Fuentes configuradas y disponibilidad",
+        "summary": "Configured sources and availability",
         "responses": {
           "200": {
             "description": "OK",
@@ -367,7 +367,7 @@
     },
     "/api/v1/catalog/tracks": {
       "get": {
-        "summary": "Enumerar tracks de una fuente",
+        "summary": "List tracks from a source",
         "responses": {
           "200": {
             "description": "OK",
@@ -433,7 +433,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
+              "description": "Source ID. When omitted, use defaultSource, which prefers local. all explicitly combines sources for search and featured content. provider is an alias for source."
             }
           }
         ]
@@ -441,7 +441,7 @@
     },
     "/api/v1/catalog/tracks/{id}": {
       "get": {
-        "summary": "Consultar tracks",
+        "summary": "Get a track",
         "responses": {
           "200": {
             "description": "OK",
@@ -478,7 +478,7 @@
     },
     "/api/v1/catalog/albums": {
       "get": {
-        "summary": "Enumerar albums de una fuente",
+        "summary": "List albums from a source",
         "responses": {
           "200": {
             "description": "OK",
@@ -544,7 +544,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
+              "description": "Source ID. When omitted, use defaultSource, which prefers local. all explicitly combines sources for search and featured content. provider is an alias for source."
             }
           }
         ]
@@ -552,7 +552,7 @@
     },
     "/api/v1/catalog/albums/{id}": {
       "get": {
-        "summary": "Consultar albums",
+        "summary": "Get an album",
         "responses": {
           "200": {
             "description": "OK",
@@ -589,7 +589,7 @@
     },
     "/api/v1/catalog/artists": {
       "get": {
-        "summary": "Enumerar artists de una fuente",
+        "summary": "List artists from a source",
         "responses": {
           "200": {
             "description": "OK",
@@ -655,7 +655,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
+              "description": "Source ID. When omitted, use defaultSource, which prefers local. all explicitly combines sources for search and featured content. provider is an alias for source."
             }
           }
         ]
@@ -663,7 +663,7 @@
     },
     "/api/v1/catalog/artists/{id}": {
       "get": {
-        "summary": "Consultar artists",
+        "summary": "Get an artist",
         "responses": {
           "200": {
             "description": "OK",
@@ -700,7 +700,7 @@
     },
     "/api/v1/catalog/playlists": {
       "get": {
-        "summary": "Enumerar playlists de una fuente",
+        "summary": "List playlists from a source",
         "responses": {
           "200": {
             "description": "OK",
@@ -766,7 +766,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
+              "description": "Source ID. When omitted, use defaultSource, which prefers local. all explicitly combines sources for search and featured content. provider is an alias for source."
             }
           }
         ]
@@ -774,7 +774,7 @@
     },
     "/api/v1/catalog/playlists/{id}": {
       "get": {
-        "summary": "Consultar playlists",
+        "summary": "Get a playlist",
         "responses": {
           "200": {
             "description": "OK",
@@ -811,7 +811,7 @@
     },
     "/api/v1/catalog/search": {
       "get": {
-        "summary": "Buscar en una o todas las fuentes",
+        "summary": "Search one or all sources",
         "responses": {
           "200": {
             "description": "OK",
@@ -850,7 +850,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
+              "description": "Source ID. When omitted, use defaultSource, which prefers local. all explicitly combines sources for search and featured content. provider is an alias for source."
             }
           }
         ]
@@ -858,7 +858,7 @@
     },
     "/api/v1/catalog/featured": {
       "get": {
-        "summary": "Catálogo destacado de una o todas las fuentes",
+        "summary": "Featured catalog from one or all sources",
         "responses": {
           "200": {
             "description": "OK",
@@ -888,7 +888,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
+              "description": "Source ID. When omitted, use defaultSource, which prefers local. all explicitly combines sources for search and featured content. provider is an alias for source."
             }
           }
         ]
@@ -896,7 +896,7 @@
     },
     "/api/v1/catalog/daily": {
       "get": {
-        "summary": "Estantes de playlists",
+        "summary": "Playlist shelves",
         "responses": {
           "200": {
             "description": "OK",
@@ -926,7 +926,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
+              "description": "Source ID. When omitted, use defaultSource, which prefers local. all explicitly combines sources for search and featured content. provider is an alias for source."
             }
           }
         ]
@@ -934,7 +934,7 @@
     },
     "/api/v1/catalog/discovery": {
       "get": {
-        "summary": "Estantes de playlists",
+        "summary": "Playlist shelves",
         "responses": {
           "200": {
             "description": "OK",
@@ -964,7 +964,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
+              "description": "Source ID. When omitted, use defaultSource, which prefers local. all explicitly combines sources for search and featured content. provider is an alias for source."
             }
           }
         ]
@@ -972,7 +972,7 @@
     },
     "/api/v1/catalog/artists/{id}/tracks": {
       "get": {
-        "summary": "Pistas de artista",
+        "summary": "Artist tracks",
         "responses": {
           "200": {
             "description": "OK",
@@ -1030,7 +1030,7 @@
     },
     "/api/v1/catalog/artists/{id}/playlists": {
       "get": {
-        "summary": "Estado de playlists de artista",
+        "summary": "Artist playlist status",
         "responses": {
           "200": {
             "description": "OK",
@@ -1081,7 +1081,7 @@
     },
     "/api/v1/catalog/tracks/{id}/motion": {
       "get": {
-        "summary": "Referencia de portada estática",
+        "summary": "Static artwork reference",
         "responses": {
           "200": {
             "description": "OK",
@@ -1123,7 +1123,7 @@
     },
     "/api/v1/audio/{id}": {
       "get": {
-        "summary": "Audio preparado en el servidor",
+        "summary": "Server-prepared audio",
         "parameters": [
           {
             "name": "id",
@@ -1275,7 +1275,7 @@
             }
           },
           "206": {
-            "description": "Rango de bytes",
+            "description": "Byte range",
             "content": {
               "audio/mp4": {
                 "schema": {
@@ -1342,7 +1342,7 @@
             }
           },
           "304": {
-            "description": "Sin cambios",
+            "description": "Not modified",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -1401,7 +1401,7 @@
             }
           },
           "416": {
-            "description": "Rango no válido",
+            "description": "Invalid range",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -1528,7 +1528,7 @@
         }
       },
       "head": {
-        "summary": "Audio preparado en el servidor",
+        "summary": "Server-prepared audio",
         "parameters": [
           {
             "name": "id",
@@ -1680,7 +1680,7 @@
             }
           },
           "206": {
-            "description": "Rango de bytes",
+            "description": "Byte range",
             "content": {
               "audio/mp4": {
                 "schema": {
@@ -1747,7 +1747,7 @@
             }
           },
           "304": {
-            "description": "Sin cambios",
+            "description": "Not modified",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -1806,7 +1806,7 @@
             }
           },
           "416": {
-            "description": "Rango no válido",
+            "description": "Invalid range",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -1935,7 +1935,7 @@
     },
     "/api/v1/catalog/artwork/{id}": {
       "get": {
-        "summary": "Imagen binaria local al módulo",
+        "summary": "Binary image served by the module",
         "parameters": [
           {
             "name": "id",
@@ -2015,7 +2015,7 @@
             }
           },
           "206": {
-            "description": "Rango de bytes",
+            "description": "Byte range",
             "content": {
               "image/png": {
                 "schema": {
@@ -2058,7 +2058,7 @@
             }
           },
           "304": {
-            "description": "Sin cambios",
+            "description": "Not modified",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -2093,7 +2093,7 @@
             }
           },
           "416": {
-            "description": "Rango no válido",
+            "description": "Invalid range",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -2173,7 +2173,7 @@
         "security": []
       },
       "head": {
-        "summary": "Imagen binaria local al módulo",
+        "summary": "Binary image served by the module",
         "parameters": [
           {
             "name": "id",
@@ -2253,7 +2253,7 @@
             }
           },
           "206": {
-            "description": "Rango de bytes",
+            "description": "Byte range",
             "content": {
               "image/png": {
                 "schema": {
@@ -2296,7 +2296,7 @@
             }
           },
           "304": {
-            "description": "Sin cambios",
+            "description": "Not modified",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -2331,7 +2331,7 @@
             }
           },
           "416": {
-            "description": "Rango no válido",
+            "description": "Invalid range",
             "headers": {
               "Content-Length": {
                 "schema": {
@@ -2413,7 +2413,7 @@
     },
     "/api/v1/lyrics/{id}": {
       "get": {
-        "summary": "Letra en TTML",
+        "summary": "TTML lyrics",
         "parameters": [
           {
             "name": "id",
@@ -2437,7 +2437,7 @@
             }
           },
           "204": {
-            "description": "Sin letra disponible"
+            "description": "No lyrics available"
           },
           "default": {
             "description": "Error",
@@ -2452,7 +2452,7 @@
         }
       },
       "head": {
-        "summary": "Letra en TTML",
+        "summary": "TTML lyrics",
         "parameters": [
           {
             "name": "id",
@@ -2476,7 +2476,7 @@
             }
           },
           "204": {
-            "description": "Sin letra disponible"
+            "description": "No lyrics available"
           },
           "default": {
             "description": "Error",
@@ -2493,7 +2493,7 @@
     },
     "/api/v1/playback": {
       "post": {
-        "summary": "Obtener URL de audio del mismo servidor",
+        "summary": "Get an audio URL on the same server",
         "responses": {
           "200": {
             "description": "OK",
@@ -2562,7 +2562,7 @@
     },
     "/api/v1/library": {
       "get": {
-        "summary": "Biblioteca por cuenta y revisión",
+        "summary": "Per-account library and revision",
         "responses": {
           "200": {
             "description": "OK",
@@ -2585,7 +2585,7 @@
             }
           },
           "304": {
-            "description": "Biblioteca sin cambios"
+            "description": "Library unchanged"
           }
         },
         "parameters": [
@@ -2611,7 +2611,7 @@
     },
     "/api/v1/library/favorites/{id}": {
       "put": {
-        "summary": "Guardar o retirar favorites",
+        "summary": "Save or remove a favorite",
         "responses": {
           "200": {
             "description": "OK",
@@ -2672,7 +2672,7 @@
         }
       },
       "delete": {
-        "summary": "Guardar o retirar favorites",
+        "summary": "Save or remove a favorite",
         "responses": {
           "200": {
             "description": "OK",
@@ -2709,7 +2709,7 @@
     },
     "/api/v1/library/saved-albums/{id}": {
       "put": {
-        "summary": "Guardar o retirar saved-albums",
+        "summary": "Save or remove an album",
         "responses": {
           "200": {
             "description": "OK",
@@ -2744,7 +2744,7 @@
         ]
       },
       "delete": {
-        "summary": "Guardar o retirar saved-albums",
+        "summary": "Save or remove an album",
         "responses": {
           "200": {
             "description": "OK",
@@ -2781,7 +2781,7 @@
     },
     "/api/v1/library/saved-playlists/{id}": {
       "put": {
-        "summary": "Guardar o retirar saved-playlists",
+        "summary": "Save or remove a catalog playlist",
         "responses": {
           "200": {
             "description": "OK",
@@ -2816,7 +2816,7 @@
         ]
       },
       "delete": {
-        "summary": "Guardar o retirar saved-playlists",
+        "summary": "Save or remove a catalog playlist",
         "responses": {
           "200": {
             "description": "OK",
@@ -2853,7 +2853,7 @@
     },
     "/api/v1/library/playlists": {
       "post": {
-        "summary": "Crear playlist personal",
+        "summary": "Create a personal playlist",
         "responses": {
           "201": {
             "description": "OK",
@@ -2914,7 +2914,7 @@
     },
     "/api/v1/library/playlists/{id}": {
       "get": {
-        "summary": "Leer, renombrar o borrar playlist personal",
+        "summary": "Read, rename, or delete a personal playlist",
         "responses": {
           "200": {
             "description": "OK",
@@ -2949,7 +2949,7 @@
         ]
       },
       "patch": {
-        "summary": "Leer, renombrar o borrar playlist personal",
+        "summary": "Read, rename, or delete a personal playlist",
         "responses": {
           "200": {
             "description": "OK",
@@ -3002,7 +3002,7 @@
         }
       },
       "delete": {
-        "summary": "Leer, renombrar o borrar playlist personal",
+        "summary": "Read, rename, or delete a personal playlist",
         "responses": {
           "200": {
             "description": "OK",
@@ -3039,7 +3039,7 @@
     },
     "/api/v1/library/playlists/{id}/tracks": {
       "post": {
-        "summary": "Añadir pistas de cualquier fuente",
+        "summary": "Add tracks from any source",
         "responses": {
           "200": {
             "description": "OK",
@@ -3105,7 +3105,7 @@
     },
     "/api/v1/library/playlists/{id}/tracks/{trackId}": {
       "delete": {
-        "summary": "Retirar pista",
+        "summary": "Remove a track",
         "responses": {
           "200": {
             "description": "OK",
@@ -3150,7 +3150,7 @@
     },
     "/api/v1/library/playlists/{id}/order": {
       "put": {
-        "summary": "Reordenar playlist",
+        "summary": "Reorder a playlist",
         "responses": {
           "200": {
             "description": "OK",
@@ -3212,7 +3212,7 @@
     },
     "/api/v1/library/import": {
       "post": {
-        "summary": "Importar biblioteca local del cliente de forma idempotente",
+        "summary": "Idempotently import the client library",
         "responses": {
           "200": {
             "description": "OK",
@@ -3302,7 +3302,7 @@
     },
     "/api/v1/following": {
       "get": {
-        "summary": "Artistas seguidos",
+        "summary": "Followed artists",
         "responses": {
           "200": {
             "description": "OK",
@@ -3341,7 +3341,7 @@
     },
     "/api/v1/following/{id}": {
       "put": {
-        "summary": "Seguir o dejar de seguir artista",
+        "summary": "Follow or unfollow an artist",
         "responses": {
           "200": {
             "description": "OK",
@@ -3387,7 +3387,7 @@
         }
       },
       "delete": {
-        "summary": "Seguir o dejar de seguir artista",
+        "summary": "Follow or unfollow an artist",
         "responses": {
           "200": {
             "description": "OK",
@@ -3424,7 +3424,7 @@
     },
     "/api/v1/admin/users": {
       "get": {
-        "summary": "Administración: listar cuentas",
+        "summary": "Administration: list accounts",
         "responses": {
           "200": {
             "description": "OK",
@@ -3449,7 +3449,7 @@
         }
       },
       "post": {
-        "summary": "Administración: crear cuenta",
+        "summary": "Administration: create an account",
         "responses": {
           "201": {
             "description": "OK",
@@ -3514,7 +3514,7 @@
     },
     "/api/v1/admin/users/{username}/password": {
       "post": {
-        "summary": "Administración: password",
+        "summary": "Administration: change a password",
         "responses": {
           "200": {
             "description": "OK",
@@ -3570,7 +3570,7 @@
     },
     "/api/v1/admin/users/{username}/revoke": {
       "post": {
-        "summary": "Administración: revoke",
+        "summary": "Administration: revoke sessions",
         "responses": {
           "200": {
             "description": "OK",
@@ -3607,7 +3607,7 @@
     },
     "/api/v1/admin/users/{username}": {
       "delete": {
-        "summary": "Administración: borrar otra cuenta",
+        "summary": "Administration: delete another account",
         "responses": {
           "200": {
             "description": "OK",
@@ -3662,7 +3662,7 @@
     },
     "/api/v1/admin/scan": {
       "get": {
-        "summary": "Estado o inicio asíncrono del escaneo local",
+        "summary": "Get local scan status or start an asynchronous scan",
         "responses": {
           "200": {
             "description": "OK",
@@ -3687,7 +3687,7 @@
         }
       },
       "post": {
-        "summary": "Estado o inicio asíncrono del escaneo local",
+        "summary": "Get local scan status or start an asynchronous scan",
         "responses": {
           "202": {
             "description": "OK",
@@ -3714,7 +3714,7 @@
     },
     "/api/v1/connect": {
       "get": {
-        "summary": "Upgrade a WebSocket Connect (protocolo documentado en API.md)",
+        "summary": "Upgrade to Connect WebSocket; protocol documented in API.md",
         "responses": {
           "101": {
             "description": "OK"

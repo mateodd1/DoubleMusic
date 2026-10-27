@@ -5,9 +5,9 @@ const { pipeline } = require('node:stream/promises');
 const { reference } = require('../models');
 const { ApiError } = require('../errors');
 const RAW_ID = /^[A-Za-z0-9_-]{1,120}$/;
-const unavailable = () => new ApiError(503, 'SOURCE_UNAVAILABLE', 'El módulo no está disponible.');
-const malformed = () => new ApiError(502, 'SOURCE_INVALID_RESPONSE', 'El módulo no cumple el contrato de la API.');
-const failed = status => status === 404 ? new ApiError(404, 'NOT_FOUND', 'No existe ese recurso.') : status === 422 ? new ApiError(422, 'AUDIO_NOT_SUPPORTED', 'El módulo no admite ese formato de audio.') : unavailable();
+const unavailable = () => new ApiError(503, 'SOURCE_UNAVAILABLE', 'The module is unavailable.');
+const malformed = () => new ApiError(502, 'SOURCE_INVALID_RESPONSE', 'The module does not comply with the API contract.');
+const failed = status => status === 404 ? new ApiError(404, 'NOT_FOUND', 'Resource not found.') : status === 422 ? new ApiError(422, 'AUDIO_NOT_SUPPORTED', 'The module does not support that audio format.') : unavailable();
 const text = (value, fallback = '') => typeof value === 'string' ? value.trim().slice(0, 300) : fallback;
 const number = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
 const array = (value, max = 5000) => { if (!Array.isArray(value) || value.length > max) throw malformed(); return value; };
@@ -15,8 +15,8 @@ const array = (value, max = 5000) => { if (!Array.isArray(value) || value.length
 class HttpSource {
   constructor({ id, name = id, origin, token, timeoutMs = 15000 }) {
     this.id = id; this.name = name; this.type = 'http'; this.origin = new URL(origin); this.token = token; this.timeoutMs = timeoutMs;
-    if (!['http:', 'https:'].includes(this.origin.protocol) || this.origin.username || this.origin.password || this.origin.pathname !== '/' || this.origin.search || this.origin.hash) throw new Error('El origen del módulo debe ser HTTP(S), sin rutas ni credenciales.');
-    if (!/^[A-Za-z0-9._~-]{16,512}$/.test(token)) throw new Error('El token del módulo debe tener entre 16 y 512 caracteres seguros.');
+    if (!['http:', 'https:'].includes(this.origin.protocol) || this.origin.username || this.origin.password || this.origin.pathname !== '/' || this.origin.search || this.origin.hash) throw new Error('The module origin must use HTTP(S) without a path or credentials.');
+    if (!/^[A-Za-z0-9._~-]{16,512}$/.test(token)) throw new Error('The module token must contain 16 to 512 safe characters.');
   }
   full(id) { if (typeof id !== 'string' || !RAW_ID.test(id)) throw malformed(); return `${this.id}:${id}`; }
   raw(id) { const ref = reference(id); if (ref.provider !== this.id) throw malformed(); return ref.sourceId; }

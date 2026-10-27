@@ -1,4 +1,4 @@
-# Ejemplo optativo: docker compose -f docker-compose.yml -f compose.modules.example.yml up -d --build
+# Optional example: docker compose -f docker-compose.yml -f compose.modules.example.yml up -d --build
 services:
   doublemusic:
     environment:
@@ -20,6 +20,6 @@ services:
       - /tmp:size=128m,mode=1777
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
-    # El healthcheck de la imagen principal es para el core, no para módulos.
+    # The main image healthcheck is for the core, not modules.
     healthcheck:
       disable: true

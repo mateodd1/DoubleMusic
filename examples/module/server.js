@@ -1,5 +1,5 @@
 'use strict';
-// Módulo de referencia: genera su propio audio y no conecta con ninguna plataforma.
+// Reference module: generates its own audio and does not connect to a platform.
 const http = require('node:http');
 const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
@@ -17,19 +17,19 @@ function sampleWav() {
   return bytes;
 }
 async function createExampleModule({ token, dataDir }) {
-  if (!/^[A-Za-z0-9._~-]{16,512}$/.test(token)) throw new Error('Configura un token de módulo válido.');
+  if (!/^[A-Za-z0-9._~-]{16,512}$/.test(token)) throw new Error('Configure a valid module token.');
   const music = path.join(dataDir, 'music'); await fs.mkdir(music, { recursive: true });
   const file = path.join(music, 'demo.wav'); await fs.writeFile(file, sampleWav());
   const image = path.join(dataDir, 'cover.png');
   await fs.writeFile(image, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jF1sAAAAASUVORK5CYII=', 'base64'));
   const catalog = await new LocalCatalog({ root: music, dataDir: path.join(dataDir, 'index') }).init();
   const media = await new LocalMedia(catalog).init(), localTrackId = [...catalog.tracks.keys()][0];
-  const artist = { id: 'artist-1', name: 'Artista de ejemplo', imageId: 'cover-1' };
-  const track = { id: 'track-1', title: 'Audio de ejemplo', artist: artist.name, artistId: artist.id, artists: [artist], album: 'Álbum de ejemplo', albumId: 'album-1', duration: 4, track: 1, coverId: 'cover-1', codec: 'pcm_s16le', sampleRate: 24000 };
+  const artist = { id: 'artist-1', name: 'Sample artist', imageId: 'cover-1' };
+  const track = { id: 'track-1', title: 'Sample audio', artist: artist.name, artistId: artist.id, artists: [artist], album: 'Sample album', albumId: 'album-1', duration: 4, track: 1, coverId: 'cover-1', codec: 'pcm_s16le', sampleRate: 24000 };
   const album = { id: 'album-1', title: track.album, artist: artist.name, artistId: artist.id, year: 2026, trackCount: 1, coverId: 'cover-1' };
-  const playlist = { id: 'playlist-1', title: 'Lista de ejemplo', trackCount: 1, coverId: 'cover-1' };
+  const playlist = { id: 'playlist-1', title: 'Sample playlist', trackCount: 1, coverId: 'cover-1' };
   const collections = { tracks: [track], albums: [album], artists: [artist], playlists: [playlist] };
-  const lyrics = '<tt xmlns="http://www.w3.org/ns/ttml"><body><div><p begin="0s" end="4s">Audio de ejemplo</p></div></body></tt>';
+  const lyrics = '<tt xmlns="http://www.w3.org/ns/ttml"><body><div><p begin="0s" end="4s">Sample audio</p></div></body></tt>';
   return http.createServer(async (req, res) => {
     res.setHeader('Cache-Control', 'private, no-store'); res.setHeader('X-Content-Type-Options', 'nosniff');
     try {
@@ -38,7 +38,7 @@ async function createExampleModule({ token, dataDir }) {
       if (!['GET', 'HEAD'].includes(req.method)) { res.setHeader('Allow', 'GET, HEAD'); return json(res, 405, { error: 'METHOD_NOT_ALLOWED' }); }
       const url = new URL(req.url, 'http://localhost'), route = url.pathname.replace(/^\/module\/v1(?=\/|$)/, '');
       if (!url.pathname.startsWith('/module/v1')) return json(res, 404, { error: 'NOT_FOUND' });
-      if (!route || route === '/') return json(res, 200, { apiVersion: 1, name: 'Módulo de referencia', capabilities: { browse: true, search: true, audio: true, artwork: true, lyrics: true } });
+      if (!route || route === '/') return json(res, 200, { apiVersion: 1, name: 'Reference module', capabilities: { browse: true, search: true, audio: true, artwork: true, lyrics: true } });
       if (route === '/catalog/featured') return json(res, 200, { albums: [album], artists: [artist], playlists: [playlist] });
       if (route === '/catalog/search') {
         const q = (url.searchParams.get('q') || '').toLowerCase();
@@ -71,8 +71,8 @@ async function createExampleModule({ token, dataDir }) {
 async function start() {
   const token = (await fs.readFile(process.env.MODULE_TOKEN_FILE, 'utf8')).trim();
   const server = await createExampleModule({ token, dataDir: process.env.MODULE_DATA_DIR || '/tmp/doublemusic-example-module' });
-  server.listen(Number(process.env.MODULE_PORT || 4000), '0.0.0.0', () => console.log('[Módulo de referencia] Escuchando.'));
+  server.listen(Number(process.env.MODULE_PORT || 4000), '0.0.0.0', () => console.log('[Reference module] Listening.'));
   const stop = () => server.close(() => process.exit(0)); process.once('SIGTERM', stop); process.once('SIGINT', stop);
 }
-if (require.main === module) start().catch(() => { console.error('No se pudo iniciar el módulo de referencia.'); process.exitCode = 1; });
+if (require.main === module) start().catch(() => { console.error('Could not start the reference module.'); process.exitCode = 1; });
 module.exports = { createExampleModule };

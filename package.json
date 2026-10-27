@@ -1,7 +1,7 @@
 {
   "name": "doublemusic",
-  "version": "1.2.0",
-  "description": "Servidor de biblioteca musical local con conexiones externas opcionales por API",
+  "version": "1.2.1",
+  "description": "Local music library server with optional external API connections",
   "private": true,
   "type": "commonjs",
   "engines": { "node": ">=22.13.0" },

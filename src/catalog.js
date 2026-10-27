@@ -6,7 +6,7 @@ const AUDIO = new Set(['.mp3', '.flac', '.m4a', '.aac', '.ogg', '.opus', '.wav',
 const id = (kind, key) => `local:${kind}_${createHash('sha256').update(key).digest('hex').slice(0, 32)}`;
 const art = value => `/api/v1/catalog/artwork/${encodeURIComponent(value)}`;
 const fold = text => String(text).normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
-const sort = (a, b) => String(a.title || a.name).localeCompare(String(b.title || b.name), 'es', { numeric: true });
+const sort = (a, b) => String(a.title || a.name).localeCompare(String(b.title || b.name), 'en', { numeric: true });
 const metadataText = (value, fallback) => typeof value === 'string' && value.trim() ? value.trim().slice(0, 300) : fallback;
 
 class LocalCatalog {
@@ -19,11 +19,11 @@ class LocalCatalog {
     this.root = await fs.realpath(this.root);
     await fs.mkdir(this.dataDir, { recursive: true, mode: 0o700 });
     this.dataDir = await fs.realpath(this.dataDir);
-    if (this.dataDir === this.root || inside(this.root, this.dataDir)) throw new Error('DATA_DIR debe estar fuera de MUSIC_DIR.');
+    if (this.dataDir === this.root || inside(this.root, this.dataDir)) throw new Error('DATA_DIR must be outside MUSIC_DIR.');
     try {
       const cache = JSON.parse(await fs.readFile(path.join(this.dataDir, 'catalog.json'), 'utf8'));
       if (cache.version === 1 && cache.root === this.root) this.entries = new Map(cache.entries.map(e => [e.relative, e]));
-    } catch { /* Primera indexación o caché incompleta. */ }
+    } catch { /* Initial indexing or incomplete cache. */ }
     await this.scan();
     return this;
   }
@@ -63,9 +63,9 @@ class LocalCatalog {
             entry = {
               relative, size: stat.size, mtimeMs: stat.mtimeMs,
               title: metadataText(tags.title, path.basename(file, path.extname(file))),
-              artist: metadataText(tags.artist, folders.length > 1 ? folders.at(-2) : 'Artista desconocido'),
-              albumArtist: metadataText(tags.album_artist || tags.albumartist, metadataText(tags.artist, folders.length > 1 ? folders.at(-2) : 'Artista desconocido')),
-              album: metadataText(tags.album, parent === '.' ? 'Sin álbum' : folders.at(-1)),
+              artist: metadataText(tags.artist, folders.length > 1 ? folders.at(-2) : 'Unknown artist'),
+              albumArtist: metadataText(tags.album_artist || tags.albumartist, metadataText(tags.artist, folders.length > 1 ? folders.at(-2) : 'Unknown artist')),
+              album: metadataText(tags.album, parent === '.' ? 'Unknown album' : folders.at(-1)),
               year: Number(String(tags.date || tags.year || '').slice(0, 4)) || 0,
               track: parseInt(tags.track, 10) || 0, disc: parseInt(tags.disc, 10) || 1,
               duration: Number(data.format?.duration || stream.duration) || 0,
@@ -77,7 +77,7 @@ class LocalCatalog {
           const directory = path.dirname(file);
           if (!covers.has(directory)) covers.set(directory, this.findCover(file));
           entries.set(relative, { ...entry, coverFile: await covers.get(directory) });
-        } catch { skipped++; this.logger.warn('[Catalog] Se ha omitido un archivo no legible.'); }
+        } catch { skipped++; this.logger.warn('[Catalog] Skipped an unreadable file.'); }
       }
     };
     await Promise.all([worker(), worker()]);
@@ -120,7 +120,7 @@ class LocalCatalog {
       await fs.writeFile(temp, JSON.stringify({ version: 1, root: this.root, entries: [...entries.values()] }), { mode: 0o600 });
       await fs.rename(temp, path.join(this.dataDir, 'catalog.json'));
     } finally { await fs.rm(temp, { force: true }); }
-    // Se publica una instantánea completa; las peticiones en curso conservan el índice anterior.
+    // Publish a complete snapshot; in-flight requests retain the previous index.
     Object.assign(this, { entries, tracks, albums, artists, playlists, generatedAt });
     this.lastScan = { tracks: tracks.size, albums: albums.size, artists: artists.size, playlists: playlists.size, skipped, generatedAt };
     return this.lastScan;
@@ -130,7 +130,7 @@ class LocalCatalog {
     const names = new Map((await fs.readdir(directory)).map(name => [name.toLowerCase(), name]));
     for (const name of ['cover.jpg', 'cover.jpeg', 'cover.png', 'folder.jpg', 'folder.png', 'front.jpg', 'front.png']) {
       if (!names.has(name)) continue;
-      try { const cover = await localFile(this.root, path.join(directory, names.get(name))); return path.relative(this.root, cover); } catch { /* Se omiten enlaces fuera de la biblioteca. */ }
+      try { const cover = await localFile(this.root, path.join(directory, names.get(name))); return path.relative(this.root, cover); } catch { /* Skip links outside the library. */ }
     }
     return '';
   }
@@ -158,9 +158,9 @@ class LocalCatalog {
   }
   featured(following = []) {
     const followed = new Set(following.map(a => a.id)), albums = this.albumRows();
-    return { albums: { title: 'Tu música', items: albums.slice(0, 200) }, artists: { title: 'Artistas locales', items: [...this.artists.values()].sort(sort).slice(0, 200) },
-      playlists: { title: 'Playlists locales', items: this.playlistRows() }, pools: { title: 'Playlists locales', items: this.playlistRows() },
-      followed: { title: 'Tus artistas', items: albums.filter(a => followed.has(a.artistId)) } };
+    return { albums: { title: 'Your music', items: albums.slice(0, 200) }, artists: { title: 'Local artists', items: [...this.artists.values()].sort(sort).slice(0, 200) },
+      playlists: { title: 'Local playlists', items: this.playlistRows() }, pools: { title: 'Local playlists', items: this.playlistRows() },
+      followed: { title: 'Followed artists', items: albums.filter(a => followed.has(a.artistId)) } };
   }
   async file(value) { return localFile(this.root, path.join(this.root, this.track(value).relative)); }
 }

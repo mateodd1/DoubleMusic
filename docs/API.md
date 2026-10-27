@@ -1,104 +1,104 @@
-# API v1 de DoubleMusic
+# DoubleMusic API v1
 
-Contrato completo y modelos: [OpenAPI de clientes](openapi.json), disponible en `/api/v1/openapi.json`. La interfaz para que los usuarios creen módulos se documenta por separado en [MODULES.md](MODULES.md) y [module-openapi.json](module-openapi.json).
+Complete contract and models: [client OpenAPI](openapi.json), also available at `/api/v1/openapi.json`. The interface for developing modules is documented separately in [MODULES.md](MODULES.md) and [module-openapi.json](module-openapi.json).
 
-El cliente configura el origen del servidor, por ejemplo `https://musica.tudominio.es`, y añade `/api/v1` a las rutas. Utiliza ese mismo origen para JSON, portadas, letras, audio y Connect. El cliente no se conecta directamente a los módulos. El despliegue debe estar en la raíz del dominio.
+Clients configure the server origin, such as `https://music.example.com`, and append `/api/v1` to API routes. Use the same origin for JSON, artwork, lyrics, audio, and Connect. Clients do not connect directly to modules. Deploy the service at the domain root.
 
-## Sesión
+## Sessions
 
-`POST /api/v1/auth/login`, con `Content-Type: application/json`:
+`POST /api/v1/auth/login`, with `Content-Type: application/json`:
 
 ```json
-{"username":"usuario","password":"contraseña","transport":"bearer"}
+{"username":"username","password":"password","transport":"bearer"}
 ```
 
-Respuesta:
+Response:
 
 ```json
 {
-  "user": {"id":"uuid","username":"usuario","role":"user"},
+  "user": {"id":"uuid","username":"username","role":"user"},
   "session": {"token":"TOKEN","tokenType":"Bearer","expiresAt":1790000000000}
 }
 ```
 
-Envía `Authorization: Bearer TOKEN` en las siguientes peticiones, también en HEAD y Range del audio. Las sesiones duran 30 días y son revocables. `transport: "cookie"` crea una cookie HttpOnly para clientes que la soporten; el token no aparece en ese JSON.
+Send `Authorization: Bearer TOKEN` with subsequent requests, including audio HEAD and Range requests. Sessions last 30 days and can be revoked. `transport: "cookie"` sets an HttpOnly cookie for clients that support it; the token is omitted from the JSON response.
 
-| Método | Ruta bajo `/api/v1` | Resultado |
+| Method | Route under `/api/v1` | Result |
 | --- | --- | --- |
-| GET | `/` | Versión, capacidades y límites; público. |
-| POST | `/auth/login` | Iniciar sesión. |
-| GET | `/auth/me` | Usuario y expiración de la sesión. |
-| POST | `/auth/logout` | Revocar la sesión actual. |
-| PUT | `/auth/password` | `{currentPassword,newPassword}`; revoca todas las sesiones de la cuenta. |
+| GET | `/` | Version, capabilities, and limits; public. |
+| POST | `/auth/login` | Sign in. |
+| GET | `/auth/me` | User identity and session expiration. |
+| POST | `/auth/logout` | Revoke the current session. |
+| PUT | `/auth/password` | `{currentPassword,newPassword}`; revoke all sessions for the account. |
 
-`GET /health` es público y devuelve estado e información del último escaneo. Las portadas también son públicas, porque los clientes las cargan como imágenes sin credenciales. Las demás rutas requieren sesión. Los tokens no se aceptan en parámetros de URL.
+`GET /health` is public and returns status and information about the last local scan. API discovery and both OpenAPI documents are public. Artwork is also public because clients load it as images without credentials. Catalog, library, lyrics, and audio routes require a session. Tokens are not accepted in URL parameters.
 
-## Modelos y catálogo
+## Models and catalog
 
-Los ids son cadenas opacas completas con el formato `fuente:id`. La fuente local utiliza `local:t_…` para pistas, `local:a_…` para álbumes, `local:r_…` para artistas y `local:p_…` para playlists de archivos. Los módulos configurados usan su propio namespace, por ejemplo `personal:track-123`. Codifica el id como un único segmento al construir URLs; no lo recortes ni lo sustituyas.
+IDs are opaque, complete strings in the form `source:id`. The local source uses `local:t_...` for tracks, `local:a_...` for albums, `local:r_...` for artists, and `local:p_...` for file playlists. Configured modules use their own namespaces, such as `personal:track-123`. Encode an ID as a single path segment when building URLs; do not shorten or replace it.
 
-Una pista:
+A track:
 
 ```json
 {
   "id":"local:t_0123456789abcdef0123456789abcdef",
   "provider":"local",
-  "title":"Canción",
-  "artist":"Artista",
+  "title":"Song",
+  "artist":"Artist",
   "artistId":"local:r_0123456789abcdef0123456789abcdef",
-  "artists":[{"id":"local:r_0123456789abcdef0123456789abcdef","name":"Artista"}],
-  "album":"Álbum",
+  "artists":[{"id":"local:r_0123456789abcdef0123456789abcdef","name":"Artist"}],
+  "album":"Album",
   "albumId":"local:a_0123456789abcdef0123456789abcdef",
   "track":1,
   "disc":1,
   "duration":180.5,
-  "coverUrl":"https://musica.tudominio.es/api/v1/catalog/artwork/local%3At_0123456789abcdef0123456789abcdef",
+  "coverUrl":"https://music.example.com/api/v1/catalog/artwork/local%3At_0123456789abcdef0123456789abcdef",
   "codec":"flac",
   "bitrate":850,
   "sampleRate":44100
 }
 ```
 
-La duración se expresa en segundos, el bitrate en kbps y la frecuencia en Hz. Las fechas de biblioteca y sesión son milisegundos Unix. Las rutas reales de los archivos quedan dentro del servidor.
+Duration is measured in seconds, bitrate in kbps, and sample rate in Hz. Library and session timestamps are Unix milliseconds. Actual filesystem paths remain inside the server.
 
-| GET bajo `/api/v1` | Respuesta |
+| GET under `/api/v1` | Response |
 | --- | --- |
-| `/catalog/featured` | Estantes `albums`, `artists`, `playlists`, `pools`, `followed`, cada uno con `title` e `items`. |
-| `/catalog/search?q=texto` | `{tracks,albums,artists,playlists}`, hasta 200 por tipo; ignora mayúsculas y tildes. |
+| `/catalog/featured` | Shelves named `albums`, `artists`, `playlists`, `pools`, and `followed`, each with `title` and `items`. |
+| `/catalog/search?q=text` | `{tracks,albums,artists,playlists}`, up to 200 per type; case-insensitive and accent-insensitive. |
 | `/catalog/albums` | `{albums,items,total,limit,offset}`. |
 | `/catalog/artists` | `{artists,items,total,limit,offset}`. |
 | `/catalog/tracks` | `{tracks,items,total,limit,offset}`. |
-| `/catalog/albums/{id}` | Álbum con `id,title,artist,artistId,year,coverUrl,trackCount,tracks`. |
+| `/catalog/albums/{id}` | Album with `id,title,artist,artistId,year,coverUrl,trackCount,tracks`. |
 | `/catalog/artists/{id}` | `{artist,albums,singles,tracks,playlists,playlistsStatus}`. |
 | `/catalog/artists/{id}/tracks` | `{artist,tracks,items,total,limit,offset}`. |
 | `/catalog/artists/{id}/playlists` | `{artistId,status:"empty",playlists:[]}`. |
-| `/catalog/tracks/{id}` | Pista. |
-| `/catalog/tracks/{id}/motion` | `{id}`; el cliente utiliza la portada estática. |
-| `/catalog/playlists` | `{playlists:[{id,title,coverUrl,trackCount}]}` a partir de M3U/M3U8. |
-| `/catalog/playlists/{id}` | Playlist con sus `tracks`. |
-| `/catalog/daily`, `/catalog/discovery` | `{generatedAt,shelves:[{title,items}]}` con las playlists locales. |
-| `/catalog/artwork/{idDePista}` | Imagen local; acepta HEAD. |
-| `/sources`, `/providers` | `{defaultSource,configuration:{library:{enabled},external:{enabled}},items:{id:{id,name,type,available,capabilities?,error?}}}`. Solo enumera fuentes activas. |
+| `/catalog/tracks/{id}` | Track. |
+| `/catalog/tracks/{id}/motion` | `{id}`; clients use the static artwork. |
+| `/catalog/playlists` | `{playlists,items,total,limit,offset}`, with playlist summaries from the selected source. |
+| `/catalog/playlists/{id}` | Playlist with its `tracks`. |
+| `/catalog/daily`, `/catalog/discovery` | `{generatedAt,shelves:[{title,items}]}` containing playlists from the selected source. |
+| `/catalog/artwork/{id}` | Artwork image; also supports HEAD. |
+| `/sources`, `/providers` | `{defaultSource,configuration:{library:{enabled},external:{enabled}},items:{id:{id,name,type,available,capabilities?,error?}}}`. Lists active sources only. |
 
-Las listas paginadas aceptan `limit` entre 1 y 500, por defecto 200, y `offset` no negativo, por defecto 0. Admiten `source=ID` y usan la fuente predeterminada si se omite. Para enumerar todas las fuentes, pagina cada una por separado. La búsqueda, la portada y los estantes utilizan también la fuente predeterminada, que es la biblioteca local cuando está configurada y no se ha indicado otra expresamente. Conectar módulos no añade consultas a la navegación local. `source=ID` selecciona una extensión y `source=all` combina las fuentes en búsqueda y portada; las respuestas incluyen su disponibilidad en `sources`. `provider` se admite como alias de `source`. `featured` incluye hasta 200 álbumes y artistas; para enumerar bibliotecas grandes se usan las rutas paginadas.
+Paginated lists accept `limit` from 1 to 500, defaulting to 200, and a nonnegative `offset`, defaulting to 0. They accept `source=ID` and use the default source when omitted. To enumerate all sources, paginate each one separately. Search, featured content, and shelves also use the default source, which is the local library when configured unless explicitly overridden. Connecting modules does not add network calls to local browsing. `source=ID` selects an extension; `source=all` combines sources for search and featured content, with per-source availability in `sources`. `provider` is accepted as an alias for `source`. `featured` includes up to 200 albums and artists; use paginated endpoints for larger libraries.
 
-Los álbumes se agrupan por artista del álbum y título; los artistas de las pistas se conservan por separado. Los álbumes con el mismo artista del álbum y título comparten ficha. Las pistas se ordenan por disco y número de pista.
+Local albums are grouped by album artist and title; individual track artists are preserved separately. Albums with the same album artist and title share a catalog entry. Tracks are sorted by disc and track number.
 
-## Audio desde el servidor
+## Server-side audio
 
-`GET` o `HEAD /api/v1/audio/{id}`. El id selecciona la fuente: la biblioteca local procesa el archivo con FFmpeg; los módulos preparan su audio y DoubleMusic lo transmite con la misma autenticación, HEAD y rangos. La respuesta contiene bytes de audio y admite un rango `Range: bytes=inicio-fin`, rangos abiertos y sufijos. Devuelve `206` con `Content-Range`, o `416` si el rango no es válido. `Content-Length`, `Accept-Ranges`, `ETag` e `If-Range` permiten precarga y saltos sin recorrer toda la pista.
+`GET` or `HEAD /api/v1/audio/{id}`. The ID selects the source: the local library processes the file with FFmpeg, while modules prepare their own audio and DoubleMusic streams it with the same authentication, HEAD, and range behavior. Responses contain audio bytes and support a single `Range: bytes=start-end`, open-ended ranges, and suffix ranges. They return `206` with `Content-Range`, or `416` for an invalid range. `Content-Length`, `Accept-Ranges`, `ETag`, and `If-Range` support preloading and seeking without scanning the entire track.
 
-| Parámetro | Valores | Comportamiento |
+| Parameter | Values | Behavior |
 | --- | --- | --- |
-| `quality` | `original`, `320`, `192`, `128` | Por defecto `original`. Los valores numéricos convierten en el servidor a ese bitrate. |
-| `layout` | `1`, `2` | `2` selecciona salida fMP4 con índice `sidx`, salvo que se indique `format` explícitamente. |
-| `format` | `original`, `mp4`, `mp3` | Sin especificar: original para calidad original y layout distinto de 2; MP4 en los demás casos. |
+| `quality` | `original`, `320`, `192`, `128` | Defaults to `original`. Numeric values request server-side conversion to that bitrate. |
+| `layout` | `1`, `2` | `2` selects fMP4 with a `sidx` index unless `format` is explicitly set. |
+| `format` | `original`, `mp4`, `mp3` | When omitted: original for original quality and a layout other than 2; MP4 otherwise. |
 
-`format=original` exige `quality=original` y entrega el archivo sin modificar. MP4 con calidad original conserva AAC, ALAC, FLAC y Opus; convierte los demás a AAC a 320 kbps. Las calidades numéricas en MP4 siempre producen AAC estéreo a 48 kHz. MP3 se convierte a la calidad pedida o a 320 kbps si se solicita `original`.
+For local audio, `format=original` requires `quality=original` and returns the file unchanged. MP4 at original quality preserves AAC, ALAC, FLAC, and Opus; other codecs are converted to AAC at 320 kbps. Numeric MP4 qualities always produce stereo AAC at 48 kHz. MP3 is converted to the requested bitrate, or 320 kbps for `original` quality.
 
-Las opciones adicionales de presentación que envíe el cliente no cambian la selección del archivo local. El formato y códec reales se informan en `Content-Type`, `X-Audio-Codec`, `X-Audio-Bitrate`, `X-Audio-Sample-Rate` y `X-Audio-Duration`. El cliente puede necesitar leer estas cabeceras para mostrar la calidad.
+Additional presentation options sent by a client do not change local file selection. The actual format and codec are reported in `Content-Type`, `X-Audio-Codec`, `X-Audio-Bitrate`, `X-Audio-Sample-Rate`, and `X-Audio-Duration`. Clients may need to read these headers to display playback quality. External modules implement the requested combinations themselves or return `422` when unsupported.
 
-Ejemplo de cliente móvil:
+Mobile client example:
 
 ```http
 GET /api/v1/audio/local%3At_0123456789abcdef0123456789abcdef?quality=192&layout=2
@@ -106,73 +106,73 @@ Authorization: Bearer TOKEN
 Range: bytes=0-65535
 ```
 
-En la fuente local, la conversión se completa en disco antes de responder; una petición HEAD también puede preparar la variante. El proxy debe permitir tiempo suficiente para la primera conversión. Las siguientes peticiones reutilizan la caché. El códec elegido debe estar soportado por el reproductor nativo del cliente.
+For the local source, conversion finishes on disk before the response is served; a HEAD request can also prepare a variant. Allow enough proxy response time for the first conversion. Later requests reuse the cache. The selected codec must be supported by the client's native player.
 
-Opcionalmente, `POST /playback` con `{trackId,quality?,format?,layout?}` devuelve `{trackId,audioUrl,format,info}`. La URL usa la misma sesión; no contiene credenciales. Los clientes que usan `/audio/{id}` directamente no necesitan esta llamada.
+Optionally, `POST /playback` with `{trackId,quality?,format?,layout?}` returns `{trackId,audioUrl,format,info}`. The URL uses the same session and contains no credentials. Clients using `/audio/{id}` directly do not need this call.
 
-## Letras
+## Lyrics
 
-`GET` o `HEAD /lyrics/{id}` devuelve TTML con `Content-Type: application/ttml+xml` y `X-Lyrics-Source: local`. Si no hay letra devuelve `204`. En la fuente local, la prioridad es `.ttml`, después `.lrc` y finalmente `.txt`, siempre al lado de la pista y con el mismo nombre base. Para un módulo, el contenido lo proporciona su ruta de letras y `X-Lyrics-Source` contiene el id de la fuente. LRC conserva sus tiempos y su desplazamiento `offset`; los textos simples no llevan tiempos.
+`GET` or `HEAD /lyrics/{id}` returns TTML with `Content-Type: application/ttml+xml` and `X-Lyrics-Source: local` for the local source. Missing lyrics return `204`. Local sidecar priority is `.ttml`, then `.lrc`, then `.txt`, next to the track with the same base filename. For modules, the module's lyrics route provides the content and `X-Lyrics-Source` contains the source ID. LRC retains its timestamps and `offset`; plain text has no timing information.
 
-## Biblioteca por cuenta
+## Per-account library
 
-| Método | Ruta bajo `/api/v1` | Cuerpo / resultado |
+| Method | Route under `/api/v1` | Body / result |
 | --- | --- | --- |
 | GET | `/library` | `{rev,favorites,playlists,savedAlbums,savedPlaylists,following,catalogRev}`. |
 | PUT | `/library/favorites/{id}` | `{track:{id}}`. |
-| DELETE | `/library/favorites/{id}` | Quitar favorito. |
-| POST | `/library/playlists` | `{name,tracks:[{id}]}`; devuelve `{rev,playlist}`. |
+| DELETE | `/library/favorites/{id}` | Remove a favorite. |
+| POST | `/library/playlists` | `{name,tracks:[{id}]}`; returns `{rev,playlist}`. |
 | GET | `/library/playlists/{id}` | `{rev,playlist:{id,name,createdAt,updatedAt,tracks}}`. |
 | PATCH | `/library/playlists/{id}` | `{name}`. |
-| DELETE | `/library/playlists/{id}` | Borrar playlist. |
-| POST | `/library/playlists/{id}/tracks` | `{tracks:[{id}]}`; devuelve `{rev,added}`. |
-| DELETE | `/library/playlists/{id}/tracks/{trackId}` | Quitar pista. |
-| PUT | `/library/playlists/{id}/order` | `{trackIds:[...],expectedRev?}`; permutación completa. |
-| PUT / DELETE | `/library/saved-albums/{id}` | Guardar o retirar álbum. |
-| PUT / DELETE | `/library/saved-playlists/{id}` | Guardar o retirar una playlist M3U. |
+| DELETE | `/library/playlists/{id}` | Delete a playlist. |
+| POST | `/library/playlists/{id}/tracks` | `{tracks:[{id}]}`; returns `{rev,added}`. |
+| DELETE | `/library/playlists/{id}/tracks/{trackId}` | Remove a track. |
+| PUT | `/library/playlists/{id}/order` | `{trackIds:[...],expectedRev?}`; a complete permutation. |
+| PUT / DELETE | `/library/saved-albums/{id}` | Save or remove an album. |
+| PUT / DELETE | `/library/saved-playlists/{id}` | Save or remove a catalog playlist. |
 | GET | `/following` | `{rev,items}`. |
-| PUT | `/following/{artistId}` | `{}`; el servidor toma los datos del artista local. |
-| DELETE | `/following/{artistId}` | Dejar de seguir. |
+| PUT | `/following/{artistId}` | `{}`; the server loads the artist's canonical metadata from its source. |
+| DELETE | `/following/{artistId}` | Unfollow an artist. |
 | POST | `/library/import` | `{source,deviceId,favorites:[{id}],playlists:[{id,name,tracks:[{id}]}]}`. |
 
-Los metadatos recibidos en escrituras se sustituyen por los de la fuente correspondiente. Los favoritos y playlists personales pueden combinar pistas de varias fuentes configuradas. Los clientes pueden enviar sus snapshots completos. Las pistas de favoritos y playlists se devuelven como `{track,addedAt}`. Las playlists personales tienen ids `u…` y pertenecen exclusivamente a su cuenta. La importación admite `source` igual a `ios`, `android` o `web` y es idempotente por cuenta, origen y dispositivo; todos los ids deben existir en alguna fuente configurada.
+Metadata received in write requests is replaced by canonical metadata from the relevant source. Favorites and personal playlists can combine tracks from configured sources. Clients may send complete snapshots. Saved tracks are returned as `{track,addedAt}`. Personal playlists use `u...` IDs and belong exclusively to their account. Imports accept `source` values `ios`, `android`, or `web` and are idempotent per account, source, and device; all IDs must exist in a configured source.
 
-Las escrituras devuelven `rev`; las operaciones idempotentes no lo incrementan. `GET /library?rev=N&catalogRev=HASH` devuelve `304` si no hay cambios. `catalogRev` permite detectar cambios en las playlists M3U guardadas. Los límites se publican en la raíz de la API. Los favoritos y playlists personales conservan su snapshot si después desaparece una pista; reproducirla devuelve `404` hasta que vuelva a estar disponible con ese id.
+Writes return `rev`; idempotent operations do not increment it. `GET /library?rev=N&catalogRev=HASH` returns `304` when nothing has changed. `catalogRev` detects changes in saved catalog playlists. Limits are published at the API root. Favorites and personal playlists keep their snapshots if a track later disappears; playback returns `404` until it becomes available again with that ID.
 
-## Administración
+## Administration
 
-Solo para `role: admin`:
+Requires `role: admin`:
 
-| Método | Ruta bajo `/api/v1` | Uso |
+| Method | Route under `/api/v1` | Purpose |
 | --- | --- | --- |
-| GET | `/admin/users` | Lista de cuentas y cantidades. |
+| GET | `/admin/users` | Accounts and item counts. |
 | POST | `/admin/users` | `{username,password,role?}`. |
-| POST | `/admin/users/{username}/password` | `{password}`; revoca las sesiones. |
-| POST | `/admin/users/{username}/revoke` | Revocar todas las sesiones. |
-| DELETE | `/admin/users/{username}` | `{confirm:username}`; no permite borrar la propia cuenta. |
-| POST | `/admin/scan` | Iniciar un escaneo local; devuelve `202` sin esperar a que termine. Sin fuente local devuelve `404 LOCAL_SOURCE_DISABLED`. |
+| POST | `/admin/users/{username}/password` | `{password}`; revokes sessions. |
+| POST | `/admin/users/{username}/revoke` | Revoke all sessions. |
+| DELETE | `/admin/users/{username}` | `{confirm:username}`; cannot delete the current account. |
+| POST | `/admin/scan` | Start a local scan; returns `202` without waiting for completion. Returns `404 LOCAL_SOURCE_DISABLED` when the local source is disabled. |
 | GET | `/admin/scan` | `{scanning,lastScan,error}`. |
 
-Los nombres de cuenta tienen entre 4 y 64 caracteres `A-Za-z0-9_.-`; las contraseñas, entre 8 y 1024 caracteres. Las bibliotecas se actualizan de forma atómica en SQLite. Los escaneos publican una nueva instantánea completa del catálogo.
+Usernames contain 4 to 64 characters from `A-Za-z0-9_.-`; passwords contain 8 to 1024 characters. Library updates are atomic in SQLite. Scans publish a complete new catalog snapshot.
 
 ## Connect
 
-WebSocket en `/api/v1/connect`, con el mismo Bearer y origen. El cliente envía primero `{type:"hello",version:1,role:"player",platform:"ios"|"android",deviceKey:"id-estable-del-dispositivo",name:"Mi móvil",capabilities:["playQueue"]}`. La clave del dispositivo debe tener entre 8 y 128 caracteres `A-Za-z0-9_-`.
+WebSocket at `/api/v1/connect`, using the same Bearer and origin. Clients first send `{type:"hello",version:1,role:"player",platform:"ios"|"android",deviceKey:"stable-device-key",name:"My phone",capabilities:["playQueue"]}`. The device key contains 8 to 128 characters from `A-Za-z0-9_-`.
 
-El servidor devuelve `ready`. El reproductor publica `{type:"state",state:{track,position,duration,playing,buffering,canNext}}`. Aquí `track` incluye `{id,title,artist,album,artistId,albumId,coverUrl,duration}`. Los tiempos están en segundos.
+The server responds with `ready`. Players publish `{type:"state",state:{track,position,duration,playing,buffering,canNext}}`. Here, `track` contains `{id,title,artist,album,artistId,albumId,coverUrl,duration}`. Times are measured in seconds.
 
-Un controlador inicia con `{type:"hello",version:1,role:"controller"}` y recibe `devices`. Envía `{type:"command",id:"id-orden",deviceId,action,trackId?,position?}`. Las acciones son `play`, `pause`, `next`, `previous`, `seek`, `transfer` y `playQueue`. Esta última incluye `{queue:[track],index,shuffle}`. El reproductor ejecuta la orden y confirma con `{type:"ack",id,ok}`; en una transferencia añade `snapshot:{queue,index,position,repeat}` después de pausar. El controlador recibe `result`.
+Controllers start with `{type:"hello",version:1,role:"controller"}` and receive `devices`. They send `{type:"command",id:"command-id",deviceId,action,trackId?,position?}`. Actions are `play`, `pause`, `next`, `previous`, `seek`, `transfer`, and `playQueue`. The last action includes `{queue:[track],index,shuffle}`. The player executes the command and acknowledges it with `{type:"ack",id,ok}`; a transfer also includes `snapshot:{queue,index,position,repeat}` after pausing. The controller receives `result`.
 
-El servidor mantiene la presencia solo en memoria y separada por cuenta. Los controladores web que envíen `Origin` deben estar en `ALLOWED_ORIGINS`; los clientes nativos usan Bearer. Las pruebas de Connect documentan reconexión, caducidad, confirmaciones y transferencia de colas.
+Presence is kept only in memory and is scoped to each account. Web controllers sending `Origin` must be allowed by `ALLOWED_ORIGINS`; native clients use Bearer authentication. Connect tests cover reconnection, expiration, acknowledgements, and queue transfers.
 
-## Errores
+## Errors
 
 ```json
-{"error":"NOT_FOUND","message":"No existe ese recurso.","requestId":"uuid"}
+{"error":"NOT_FOUND","message":"Resource not found.","requestId":"uuid"}
 ```
 
-Estados principales: `400` petición inválida, `401` sesión inválida, `403` permisos, `404` recurso inexistente, `409` conflicto de orden o revisión, `413` límite excedido, `416` rango inválido, `422` archivo o formato no procesable, `429` límite de acceso y `503` cola de conversiones llena.
+Main statuses: `400` invalid request, `401` invalid session, `403` insufficient permissions, `404` missing resource, `409` order or revision conflict, `413` limit exceeded, `416` invalid range, `422` unsupported file or format, `429` rate limit, and `503` a full conversion queue.
 
-Los módulos no disponibles producen `503 SOURCE_UNAVAILABLE`; las respuestas de módulo que incumplen el contrato producen `502 SOURCE_INVALID_RESPONSE`. El core no reenvía errores privados ni credenciales del módulo. Consulta [MODULES.md](MODULES.md) para configurar fuentes y desarrollar módulos.
+Unavailable modules produce `503 SOURCE_UNAVAILABLE`; module responses that violate the contract produce `502 SOURCE_INVALID_RESPONSE`. The core does not forward private module errors or credentials. See [MODULES.md](MODULES.md) to configure sources and develop modules.
 
-La configuración permite activar o desactivar independientemente `library.enabled` (por defecto `true`) y `external.enabled` (por defecto `false`). Se aplica al reiniciar. Desactivar una parte conserva los datos del usuario pero retira sus rutas de catálogo y audio; los ids de fuentes inactivas devuelven `404 SOURCE_NOT_FOUND`. Con ambas desactivadas, el core mantiene cuentas y biblioteca personal, devuelve listas de catálogo vacías y publica `defaultSource: null`. Los contratos y `/health` siguen disponibles.
+Configuration independently controls `library.enabled` (default `true`) and `external.enabled` (default `false`). Changes take effect on restart. Disabling a feature preserves user data but removes that feature's sources from catalog and audio routing; inactive source IDs return `404 SOURCE_NOT_FOUND`. With both disabled, the core keeps accounts and personal libraries available, returns empty catalog lists, and publishes `defaultSource: null`. Contracts and `/health` remain available.
