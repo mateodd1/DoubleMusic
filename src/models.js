@@ -2,8 +2,9 @@
 const { invalid } = require('./errors');
 const LIMITS = Object.freeze({ favorites: 5000, playlists: 200, savedPlaylists: 200, savedAlbums: 200, playlistTracks: 5000, following: 100 });
 function reference(value) {
-  if (typeof value !== 'string' || !/^local:[A-Za-z0-9_-]{1,120}$/.test(value)) throw invalid('El id debe pertenecer al catálogo local, por ejemplo local:t_0123456789.');
-  return { provider: 'local', sourceId: value.slice(6) };
+  if (typeof value !== 'string' || !/^[a-z][a-z0-9-]{0,31}:[A-Za-z0-9_-]{1,120}$/.test(value)) throw invalid('El id debe incluir la fuente, por ejemplo local:t_0123456789.');
+  const at = value.indexOf(':');
+  return { provider: value.slice(0, at), sourceId: value.slice(at + 1) };
 }
 function object(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw invalid('Se espera un objeto JSON.');
@@ -15,13 +16,13 @@ function name(value) {
 }
 function localImage(value) {
   if (!value) return '';
-  if (typeof value !== 'string' || !/^\/api\/v1\/catalog\/artwork\/local%3A[a-zA-Z0-9_-]+$/.test(value)) throw invalid('La portada debe pertenecer al catálogo local.');
+  if (typeof value !== 'string' || !/^\/api\/v1\/catalog\/artwork\/[a-z][a-z0-9-]{0,31}%3A[A-Za-z0-9_-]{1,120}$/.test(value)) throw invalid('La portada debe pertenecer al catálogo de DoubleMusic.');
   return value;
 }
 function track(value) {
   object(value); reference(value.id);
   if (typeof value.title !== 'string' || !value.title.trim()) throw invalid('La pista necesita título.');
-  const out = { id: value.id, provider: 'local', title: value.title.trim().slice(0, 300), duration: 0 };
+  const out = { id: value.id, provider: reference(value.id).provider, title: value.title.trim().slice(0, 300), duration: 0 };
   if (value.duration !== undefined) {
     if (typeof value.duration !== 'number' || !Number.isFinite(value.duration) || value.duration < 0) throw invalid('Duración inválida.');
     out.duration = value.duration;

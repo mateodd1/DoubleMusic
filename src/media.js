@@ -41,6 +41,16 @@ async function serveFile(req, res, file, type, { publicCache = false } = {}) {
   } finally { await handle.close(); }
 }
 
+function audioOptions(params) {
+  const quality = params.get('quality') || 'original';
+  if (!['original', '320', '192', '128'].includes(quality)) throw invalid('Calidad inválida.');
+  const layout = params.get('layout');
+  if (layout && !['1', '2'].includes(layout)) throw invalid('Layout inválido.');
+  const format = params.get('format') || (layout === '2' || quality !== 'original' ? 'mp4' : 'original');
+  if (!['original', 'mp4', 'mp3'].includes(format) || (format === 'original' && quality !== 'original')) throw invalid('Formato incompatible con la calidad.');
+  return { quality, format };
+}
+
 class LocalMedia {
   constructor(catalog, { cacheDir = path.join(catalog.dataDir, 'cache'), maxBytes = Number(process.env.CACHE_MAX_MB || 2048) * 1024 * 1024 } = {}) {
     this.catalog = catalog; this.cacheDir = path.resolve(cacheDir); this.maxBytes = maxBytes;
@@ -80,15 +90,7 @@ class LocalMedia {
       await fs.rm(entry.file, { force: true }); size -= entry.size;
     }
   }
-  options(params) {
-    const quality = params.get('quality') || 'original';
-    if (!['original', '320', '192', '128'].includes(quality)) throw invalid('Calidad inválida.');
-    const layout = params.get('layout');
-    if (layout && !['1', '2'].includes(layout)) throw invalid('Layout inválido.');
-    const format = params.get('format') || (layout === '2' || quality !== 'original' ? 'mp4' : 'original');
-    if (!['original', 'mp4', 'mp3'].includes(format) || (format === 'original' && quality !== 'original')) throw invalid('Formato incompatible con la calidad.');
-    return { quality, format };
-  }
+  options(params) { return audioOptions(params); }
   async audio(req, res, value, params) {
     const { quality, format } = this.options(params);
     const entry = this.catalog.track(value), source = await this.catalog.file(value), stat = await fs.stat(source);
@@ -145,4 +147,4 @@ class LocalMedia {
     return null;
   }
 }
-module.exports = { LocalMedia, serveFile };
+module.exports = { LocalMedia, serveFile, audioOptions };

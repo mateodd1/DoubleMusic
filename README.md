@@ -1,10 +1,20 @@
 # DoubleMusic
 
-API de música local para clientes móviles DuoMusic que permiten indicar la URL de su servidor. Indexa una carpeta de audio y sirve el catálogo, las cuentas y la reproducción desde un único servicio. El audio se prepara en el servidor.
+Servidor para tu propia biblioteca musical, con API para clientes móviles DuoMusic y una interfaz HTTP versionada para módulos creados por cada usuario. Puedes servir archivos descargados, conectar tus propios módulos o combinar ambas fuentes. El audio se prepara y entrega desde el servidor.
 
 Incluye usuarios con sesiones revocables, favoritos, playlists personales, álbumes guardados, artistas seguidos, playlists M3U, portadas y letras locales, streaming con saltos por rangos de bytes y control entre dispositivos mediante Connect.
 
-El servidor funciona sin acceso a Internet una vez instalado. Sus componentes son Node.js 22.13 o posterior, SQLite integrado en Node.js, FFmpeg/FFprobe y el paquete `ws` para WebSocket. Todos los datos se guardan en el servidor.
+La única fuente incluida y activada por defecto es la biblioteca local, que funciona sin acceso a Internet una vez instalada. Los módulos son servicios optativos que implementa el usuario; no se incluye ninguna integración con plataformas. El núcleo utiliza Node.js 22.13 o posterior, SQLite integrado, FFmpeg/FFprobe y `ws` para WebSocket.
+
+## API e interfaz de módulos
+
+- [API para clientes móviles](docs/API.md) y [contrato OpenAPI](docs/openapi.json).
+- [Guía para crear módulos](docs/MODULES.md) y [contrato OpenAPI de módulos](docs/module-openapi.json).
+- [Módulo de referencia ejecutable](examples/module/server.js), con audio de muestra generado localmente.
+
+Cada módulo implementa `/module/v1`: catálogo, búsqueda, pistas, audio, imágenes y letras. DoubleMusic mantiene las cuentas, permisos, favoritos y playlists; los clientes siguen usando `/api/v1`. El operador conecta módulos mediante `SOURCES_FILE`. No hay que modificar el núcleo ni añadir dependencias de una plataforma al servidor.
+
+Los contratos también se sirven en `/api/v1/openapi.json` y `/api/v1/modules/openapi.json`. El ejemplo y su configuración optativa están explicados en [MODULES.md](docs/MODULES.md).
 
 ## Inicio con Docker
 
@@ -48,16 +58,17 @@ Se omiten carpetas ocultas, enlaces simbólicos y archivos que no puedan leerse.
 
 La API usa `/api/v1`. Los clientes deben conservar los ids completos y enviar `Authorization: Bearer TOKEN` también en las peticiones de audio, HEAD y Range. El catálogo, la sesión y el audio comparten origen.
 
-`GET /api/v1/audio/{id}` sirve el archivo original. Con `layout=2` entrega fMP4 con índice `sidx`, adecuado para clientes móviles que usan ese formato. Las calidades `320`, `192` y `128` convierten el audio a AAC en el servidor; `format=mp3` permite solicitar MP3. Las conversiones se reutilizan desde la caché.
+En la fuente local, `GET /api/v1/audio/{id}` sirve el archivo original. Con `layout=2` entrega fMP4 con índice `sidx`, adecuado para clientes móviles que usan ese formato. Las calidades `320`, `192` y `128` convierten el audio a AAC en el servidor; `format=mp3` permite solicitar MP3. Las conversiones se reutilizan desde la caché. Para una fuente de módulo, el módulo prepara el audio solicitado y el core lo transmite.
 
 En fMP4, la calidad `original` conserva AAC, ALAC, FLAC y Opus. Los demás códecs se convierten a AAC a 320 kbps. Para obtener siempre los bytes originales se usa `quality=original&format=original`. La compatibilidad final del códec depende del reproductor del móvil.
 
-Este servidor implementa el contrato v1 de DuoMusic; el cliente debe permitir configurar el origen del servicio y utilizar ids `local:`. La documentación de integración está en [docs/API.md](docs/API.md). Las pruebas HTTP validan el contrato y los archivos de audio; no sustituyen la comprobación en cada versión de las apps móviles.
+Este servidor implementa el contrato v1 de DuoMusic; el cliente debe permitir configurar el origen del servicio y conservar ids completos `fuente:id`; la biblioteca local utiliza `local:`. La documentación de integración está en [docs/API.md](docs/API.md). Las pruebas HTTP validan el contrato y los archivos de audio; no sustituyen la comprobación en cada versión de las apps móviles.
 
 ## Configuración
 
 | Variable | Valor por defecto | Uso |
 | --- | --- | --- |
+| `SOURCES_FILE` | vacío | Configuración JSON de fuentes. Sin ella, solo se carga la biblioteca local. Ver [módulos](docs/MODULES.md). |
 | `MUSIC_DIR` | `./music` | Carpeta de música del host en Compose. |
 | `PORT` | `3000` | Puerto publicado en el host en Compose. |
 | `BIND_ADDRESS` | `0.0.0.0` | Dirección del host donde publicar el puerto. |
@@ -81,7 +92,7 @@ docker compose exec doublemusic node cli.js del usuario
 docker compose logs --tail=100 doublemusic
 ```
 
-Las cuentas son independientes: sus favoritos, playlists y sesiones se guardan por usuario. Cambiar la contraseña revoca sus sesiones. Los administradores pueden gestionar cuentas y forzar escaneos por API. Para hacer una copia coherente, detén el contenedor y copia el volumen `library-data`; la carpeta de música se respalda por separado.
+Las fuentes se configuran para la instancia; las cuentas son independientes y sus favoritos, playlists y sesiones se guardan por usuario. Las playlists pueden mezclar pistas de varias fuentes. Cambiar la contraseña revoca sus sesiones. Los administradores pueden gestionar cuentas y forzar escaneos por API. Para hacer una copia coherente, detén el contenedor y copia el volumen `library-data`; la carpeta de música se respalda por separado.
 
 ## Ejecución directa y pruebas
 

@@ -1,0 +1,2299 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "DoubleMusic Module API",
+    "version": "1.0.0",
+    "description": "Contrato que implementan módulos HTTP opcionales, en cualquier lenguaje. Los ids son propios del módulo, sin prefijo. DoubleMusic añade el namespace, autentica a los clientes y conserva sus bibliotecas. El token de módulo es independiente de las cuentas de usuario."
+  },
+  "servers": [
+    {
+      "url": "/module/v1"
+    }
+  ],
+  "security": [
+    {
+      "moduleToken": []
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Identidad, versión y capacidades del módulo",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Manifest"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalog/tracks": {
+      "get": {
+        "summary": "Enumerar tracks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackPage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ]
+      }
+    },
+    "/catalog/tracks/{id}": {
+      "get": {
+        "summary": "Consultar tracks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Track"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RawId"
+            }
+          }
+        ]
+      }
+    },
+    "/catalog/albums": {
+      "get": {
+        "summary": "Enumerar albums",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumPage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ]
+      }
+    },
+    "/catalog/albums/{id}": {
+      "get": {
+        "summary": "Consultar albums",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RawId"
+            }
+          }
+        ]
+      }
+    },
+    "/catalog/artists": {
+      "get": {
+        "summary": "Enumerar artists",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtistPage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ]
+      }
+    },
+    "/catalog/artists/{id}": {
+      "get": {
+        "summary": "Consultar artists",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtistDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RawId"
+            }
+          }
+        ]
+      }
+    },
+    "/catalog/playlists": {
+      "get": {
+        "summary": "Enumerar playlists",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistPage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ]
+      }
+    },
+    "/catalog/playlists/{id}": {
+      "get": {
+        "summary": "Consultar playlists",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RawId"
+            }
+          }
+        ]
+      }
+    },
+    "/catalog/search": {
+      "get": {
+        "summary": "Buscar en el catálogo del módulo",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Search"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 300
+            }
+          }
+        ]
+      }
+    },
+    "/catalog/featured": {
+      "get": {
+        "summary": "Selección del catálogo; arrays de hasta 200 elementos",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Featured"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalog/artists/{id}/tracks": {
+      "get": {
+        "summary": "Pistas de un artista",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackPage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RawId"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 200
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ]
+      }
+    },
+    "/audio/{id}": {
+      "get": {
+        "summary": "Audio preparado en el servidor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RawId"
+            }
+          },
+          {
+            "name": "quality",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "original",
+                "320",
+                "192",
+                "128"
+              ],
+              "default": "original"
+            }
+          },
+          {
+            "name": "layout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1",
+                "2"
+              ]
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "original",
+                "mp4",
+                "mp3"
+              ]
+            }
+          },
+          {
+            "name": "spatial",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Range",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Range",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "audio/mp4": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              },
+              "X-Audio-Codec": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Codec"
+              },
+              "X-Audio-Bitrate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Bitrate"
+              },
+              "X-Audio-Sample-Rate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Sample-Rate"
+              },
+              "X-Audio-Duration": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Duration"
+              }
+            }
+          },
+          "206": {
+            "description": "Rango de bytes",
+            "content": {
+              "audio/mp4": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              },
+              "X-Audio-Codec": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Codec"
+              },
+              "X-Audio-Bitrate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Bitrate"
+              },
+              "X-Audio-Sample-Rate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Sample-Rate"
+              },
+              "X-Audio-Duration": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Duration"
+              }
+            }
+          },
+          "304": {
+            "description": "Sin cambios",
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              },
+              "X-Audio-Codec": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Codec"
+              },
+              "X-Audio-Bitrate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Bitrate"
+              },
+              "X-Audio-Sample-Rate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Sample-Rate"
+              },
+              "X-Audio-Duration": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Duration"
+              }
+            }
+          },
+          "416": {
+            "description": "Rango no válido",
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              },
+              "X-Audio-Codec": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Codec"
+              },
+              "X-Audio-Bitrate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Bitrate"
+              },
+              "X-Audio-Sample-Rate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Sample-Rate"
+              },
+              "X-Audio-Duration": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Duration"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              },
+              "X-Audio-Codec": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Codec"
+              },
+              "X-Audio-Bitrate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Bitrate"
+              },
+              "X-Audio-Sample-Rate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Sample-Rate"
+              },
+              "X-Audio-Duration": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Duration"
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "summary": "Audio preparado en el servidor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RawId"
+            }
+          },
+          {
+            "name": "quality",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "original",
+                "320",
+                "192",
+                "128"
+              ],
+              "default": "original"
+            }
+          },
+          {
+            "name": "layout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1",
+                "2"
+              ]
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "original",
+                "mp4",
+                "mp3"
+              ]
+            }
+          },
+          {
+            "name": "spatial",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Range",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Range",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "audio/mp4": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              },
+              "X-Audio-Codec": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Codec"
+              },
+              "X-Audio-Bitrate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Bitrate"
+              },
+              "X-Audio-Sample-Rate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Sample-Rate"
+              },
+              "X-Audio-Duration": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Duration"
+              }
+            }
+          },
+          "206": {
+            "description": "Rango de bytes",
+            "content": {
+              "audio/mp4": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              },
+              "X-Audio-Codec": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Codec"
+              },
+              "X-Audio-Bitrate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Bitrate"
+              },
+              "X-Audio-Sample-Rate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Sample-Rate"
+              },
+              "X-Audio-Duration": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Duration"
+              }
+            }
+          },
+          "304": {
+            "description": "Sin cambios",
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              },
+              "X-Audio-Codec": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Codec"
+              },
+              "X-Audio-Bitrate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Bitrate"
+              },
+              "X-Audio-Sample-Rate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Sample-Rate"
+              },
+              "X-Audio-Duration": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Duration"
+              }
+            }
+          },
+          "416": {
+            "description": "Rango no válido",
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              },
+              "X-Audio-Codec": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Codec"
+              },
+              "X-Audio-Bitrate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Bitrate"
+              },
+              "X-Audio-Sample-Rate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Sample-Rate"
+              },
+              "X-Audio-Duration": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Duration"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              },
+              "X-Audio-Codec": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Codec"
+              },
+              "X-Audio-Bitrate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Bitrate"
+              },
+              "X-Audio-Sample-Rate": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Sample-Rate"
+              },
+              "X-Audio-Duration": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "X-Audio-Duration"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/artwork/{id}": {
+      "get": {
+        "summary": "Imagen binaria local al módulo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RawId"
+            }
+          },
+          {
+            "name": "Range",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Range",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              }
+            }
+          },
+          "206": {
+            "description": "Rango de bytes",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              }
+            }
+          },
+          "304": {
+            "description": "Sin cambios",
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              }
+            }
+          },
+          "416": {
+            "description": "Rango no válido",
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "summary": "Imagen binaria local al módulo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RawId"
+            }
+          },
+          {
+            "name": "Range",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Range",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              }
+            }
+          },
+          "206": {
+            "description": "Rango de bytes",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              }
+            }
+          },
+          "304": {
+            "description": "Sin cambios",
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              }
+            }
+          },
+          "416": {
+            "description": "Rango no válido",
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Length"
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Content-Range"
+              },
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Accept-Ranges"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "ETag"
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Last-Modified"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lyrics/{id}": {
+      "get": {
+        "summary": "Letra en TTML",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RawId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/ttml+xml": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Sin letra disponible"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "moduleToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Secreto compartido entre DoubleMusic y el módulo. No es una sesión de usuario."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "RawId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{1,120}$"
+      },
+      "Id": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]{0,31}:[A-Za-z0-9_-]{1,120}$"
+      },
+      "Capabilities": {
+        "type": "object",
+        "properties": {
+          "browse": {
+            "type": "boolean"
+          },
+          "search": {
+            "type": "boolean"
+          },
+          "audio": {
+            "type": "boolean"
+          },
+          "artwork": {
+            "type": "boolean"
+          },
+          "lyrics": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "browse",
+          "search",
+          "audio",
+          "artwork",
+          "lyrics"
+        ]
+      },
+      "Artist": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/RawId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "imageId": {
+            "$ref": "#/components/schemas/RawId"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "Track": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/RawId"
+          },
+          "title": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "number",
+            "minimum": 0
+          },
+          "artist": {
+            "type": "string"
+          },
+          "artistId": {
+            "$ref": "#/components/schemas/RawId"
+          },
+          "artists": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artist"
+            }
+          },
+          "album": {
+            "type": "string"
+          },
+          "albumId": {
+            "$ref": "#/components/schemas/RawId"
+          },
+          "track": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "disc": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "coverId": {
+            "$ref": "#/components/schemas/RawId"
+          },
+          "codec": {
+            "type": "string"
+          },
+          "bitrate": {
+            "type": "number",
+            "minimum": 0
+          },
+          "sampleRate": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "duration"
+        ]
+      },
+      "Album": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/RawId"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": "string"
+          },
+          "artistId": {
+            "$ref": "#/components/schemas/RawId"
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "trackCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "coverId": {
+            "$ref": "#/components/schemas/RawId"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ]
+      },
+      "Playlist": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/RawId"
+          },
+          "title": {
+            "type": "string"
+          },
+          "trackCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "coverId": {
+            "$ref": "#/components/schemas/RawId"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ]
+      },
+      "TrackPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Track"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ]
+      },
+      "AlbumPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Album"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ]
+      },
+      "ArtistPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artist"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ]
+      },
+      "PlaylistPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Playlist"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ]
+      },
+      "AlbumDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Album"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "tracks": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Track"
+                }
+              }
+            },
+            "required": [
+              "tracks"
+            ]
+          }
+        ]
+      },
+      "PlaylistDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Playlist"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "tracks": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Track"
+                }
+              }
+            },
+            "required": [
+              "tracks"
+            ]
+          }
+        ]
+      },
+      "ArtistDetail": {
+        "type": "object",
+        "properties": {
+          "artist": {
+            "$ref": "#/components/schemas/Artist"
+          },
+          "albums": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Album"
+            }
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Track"
+            }
+          }
+        },
+        "required": [
+          "artist",
+          "albums",
+          "tracks"
+        ]
+      },
+      "Search": {
+        "type": "object",
+        "properties": {
+          "tracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Track"
+            }
+          },
+          "albums": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Album"
+            }
+          },
+          "artists": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artist"
+            }
+          },
+          "playlists": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Playlist"
+            }
+          }
+        }
+      },
+      "Featured": {
+        "type": "object",
+        "properties": {
+          "albums": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Album"
+            }
+          },
+          "artists": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artist"
+            }
+          },
+          "playlists": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Playlist"
+            }
+          }
+        }
+      },
+      "Manifest": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/Capabilities"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "name",
+          "capabilities"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+# Ejemplo optativo: docker compose -f docker-compose.yml -f compose.modules.example.yml up -d --build
+services:
+  doublemusic:
+    environment:
+      SOURCES_FILE: /config/sources.json
+    volumes:
+      - ./examples/sources.json:/config/sources.json:ro
+      - ./secrets/module-token:/run/secrets/module-token:ro
+  example-module:
+    build: .
+    command: [node, examples/module/server.js]
+    restart: unless-stopped
+    init: true
+    environment:
+      MODULE_TOKEN_FILE: /run/secrets/module-token
+    volumes:
+      - ./secrets/module-token:/run/secrets/module-token:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    # El healthcheck de la imagen principal es para el core, no para módulos.
+    healthcheck:
+      disable: true

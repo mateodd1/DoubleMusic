@@ -5,3 +5,5 @@ music/
 *.sqlite*
 coverage/
 *.log
+secrets/
+/sources.json

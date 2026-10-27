@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "defaultSource": "local",
+  "sources": [
+    { "id": "local", "type": "local" },
+    {
+      "id": "example",
+      "name": "Mi módulo",
+      "type": "http",
+      "origin": "http://example-module:4000",
+      "tokenFile": "/run/secrets/module-token"
+    }
+  ]
+}

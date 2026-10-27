@@ -5,6 +5,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY --chown=node:node src ./src
+COPY --chown=node:node docs/*.json ./docs/
+COPY --chown=node:node examples/module ./examples/module
 COPY --chown=node:node server.js cli.js ./
 RUN mkdir -p /data /music && chown node:node /data /music
 ENV NODE_ENV=production DATA_DIR=/data MUSIC_DIR=/music PORT=3000

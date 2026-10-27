@@ -12,6 +12,7 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-false}
       SECURE_COOKIES: ${SECURE_COOKIES:-false}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      SOURCES_FILE: ${SOURCES_FILE:-}
     volumes:
       - "${MUSIC_DIR:-./music}:/music:ro"
       - library-data:/data

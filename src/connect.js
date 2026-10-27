@@ -7,13 +7,13 @@ const PATH = '/api/v1/connect';
 const ACTIONS = new Set(['play', 'pause', 'next', 'previous', 'seek', 'transfer', 'playQueue']);
 const seconds = n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 86400;
 function track(t, publicUrl = '') {
-  if (!t || typeof t.id !== 'string' || !/^local:[A-Za-z0-9_-]{1,120}$/.test(t.id)) throw Error('INVALID_TRACK');
+  if (!t || typeof t.id !== 'string' || !/^[a-z][a-z0-9-]{0,31}:[A-Za-z0-9_-]{1,120}$/.test(t.id)) throw Error('INVALID_TRACK');
   const text = (v, n = 256) => typeof v === 'string' ? v.slice(0, n) : '';
   // No playback tickets, credentials or audio URLs cross between devices.
   let coverUrl = '';
   if (typeof t.coverUrl === 'string') {
     const image = publicUrl && t.coverUrl.startsWith(publicUrl + '/') ? t.coverUrl.slice(publicUrl.length) : t.coverUrl;
-    if (/^\/api\/v1\/catalog\/artwork\/local%3A[A-Za-z0-9_-]+$/.test(image)) coverUrl = publicUrl + image;
+    if (/^\/api\/v1\/catalog\/artwork\/[a-z][a-z0-9-]{0,31}%3A[A-Za-z0-9_-]{1,120}$/.test(image)) coverUrl = publicUrl + image;
   }
   return { id: t.id, title: text(t.title), artist: text(t.artist), album: text(t.album), artistId: text(t.artistId, 160), albumId: text(t.albumId, 160), coverUrl, duration: seconds(t.duration) ? t.duration : 0 };
 }

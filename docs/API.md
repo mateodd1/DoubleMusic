@@ -1,6 +1,8 @@
 # API v1 de DoubleMusic
 
-El cliente configura el origen del servidor, por ejemplo `https://musica.tudominio.es`, y añade `/api/v1` a las rutas. Utiliza ese mismo origen para JSON, portadas, letras, audio y Connect. El despliegue debe estar en la raíz del dominio.
+Contrato completo y modelos: [OpenAPI de clientes](openapi.json), disponible en `/api/v1/openapi.json`. La interfaz para que los usuarios creen módulos se documenta por separado en [MODULES.md](MODULES.md) y [module-openapi.json](module-openapi.json).
+
+El cliente configura el origen del servidor, por ejemplo `https://musica.tudominio.es`, y añade `/api/v1` a las rutas. Utiliza ese mismo origen para JSON, portadas, letras, audio y Connect. El cliente no se conecta directamente a los módulos. El despliegue debe estar en la raíz del dominio.
 
 ## Sesión
 
@@ -33,7 +35,7 @@ Envía `Authorization: Bearer TOKEN` en las siguientes peticiones, también en H
 
 ## Modelos y catálogo
 
-Los ids son cadenas opacas completas: `local:t_…` para pistas, `local:a_…` para álbumes, `local:r_…` para artistas y `local:p_…` para playlists de archivos. Codifica el id como un único segmento al construir URLs; no lo recortes ni lo sustituyas.
+Los ids son cadenas opacas completas con el formato `fuente:id`. La fuente local utiliza `local:t_…` para pistas, `local:a_…` para álbumes, `local:r_…` para artistas y `local:p_…` para playlists de archivos. Los módulos configurados usan su propio namespace, por ejemplo `personal:track-123`. Codifica el id como un único segmento al construir URLs; no lo recortes ni lo sustituyas.
 
 Una pista:
 
@@ -76,15 +78,15 @@ La duración se expresa en segundos, el bitrate en kbps y la frecuencia en Hz. L
 | `/catalog/playlists/{id}` | Playlist con sus `tracks`. |
 | `/catalog/daily`, `/catalog/discovery` | `{generatedAt,shelves:[{title,items}]}` con las playlists locales. |
 | `/catalog/artwork/{idDePista}` | Imagen local; acepta HEAD. |
-| `/providers` | `{items:{local:{available:true}}}`. |
+| `/sources`, `/providers` | `{defaultSource,items:{id:{id,name,type,available,capabilities?,error?}}}`. |
 
-Las listas paginadas aceptan `limit` entre 1 y 500, por defecto 200, y `offset` no negativo, por defecto 0. `featured` incluye hasta 200 álbumes y artistas; para enumerar bibliotecas grandes se usan las rutas paginadas.
+Las listas paginadas aceptan `limit` entre 1 y 500, por defecto 200, y `offset` no negativo, por defecto 0. Admiten `source=ID` y usan la fuente predeterminada si se omite. Para enumerar todas las fuentes, pagina cada una por separado. La búsqueda y la portada combinan todas por defecto, admiten `source=ID` o `source=all` e incluyen disponibilidad por fuente en `sources`. `provider` se admite como alias de `source`. `featured` incluye hasta 200 álbumes y artistas; para enumerar bibliotecas grandes se usan las rutas paginadas.
 
 Los álbumes se agrupan por artista del álbum y título; los artistas de las pistas se conservan por separado. Los álbumes con el mismo artista del álbum y título comparten ficha. Las pistas se ordenan por disco y número de pista.
 
 ## Audio desde el servidor
 
-`GET` o `HEAD /api/v1/audio/{id}`. La respuesta contiene bytes de audio y admite un rango `Range: bytes=inicio-fin`, rangos abiertos y sufijos. Devuelve `206` con `Content-Range`, o `416` si el rango no es válido. `Content-Length`, `Accept-Ranges`, `ETag` e `If-Range` permiten precarga y saltos sin recorrer toda la pista.
+`GET` o `HEAD /api/v1/audio/{id}`. El id selecciona la fuente: la biblioteca local procesa el archivo con FFmpeg; los módulos preparan su audio y DoubleMusic lo transmite con la misma autenticación, HEAD y rangos. La respuesta contiene bytes de audio y admite un rango `Range: bytes=inicio-fin`, rangos abiertos y sufijos. Devuelve `206` con `Content-Range`, o `416` si el rango no es válido. `Content-Length`, `Accept-Ranges`, `ETag` e `If-Range` permiten precarga y saltos sin recorrer toda la pista.
 
 | Parámetro | Valores | Comportamiento |
 | --- | --- | --- |
@@ -104,13 +106,13 @@ Authorization: Bearer TOKEN
 Range: bytes=0-65535
 ```
 
-La conversión se completa en disco antes de responder; una petición HEAD también puede preparar la variante. El proxy debe permitir tiempo suficiente para la primera conversión. Las siguientes peticiones reutilizan la caché. El códec elegido debe estar soportado por el reproductor nativo del cliente.
+En la fuente local, la conversión se completa en disco antes de responder; una petición HEAD también puede preparar la variante. El proxy debe permitir tiempo suficiente para la primera conversión. Las siguientes peticiones reutilizan la caché. El códec elegido debe estar soportado por el reproductor nativo del cliente.
 
 Opcionalmente, `POST /playback` con `{trackId,quality?,format?,layout?}` devuelve `{trackId,audioUrl,format,info}`. La URL usa la misma sesión; no contiene credenciales. Los clientes que usan `/audio/{id}` directamente no necesitan esta llamada.
 
 ## Letras
 
-`GET` o `HEAD /lyrics/{id}` devuelve TTML con `Content-Type: application/ttml+xml` y `X-Lyrics-Source: local`. Si no hay letra devuelve `204`. La prioridad es `.ttml`, después `.lrc` y finalmente `.txt`, siempre al lado de la pista y con el mismo nombre base. LRC conserva sus tiempos y su desplazamiento `offset`; los textos simples no llevan tiempos.
+`GET` o `HEAD /lyrics/{id}` devuelve TTML con `Content-Type: application/ttml+xml` y `X-Lyrics-Source: local`. Si no hay letra devuelve `204`. En la fuente local, la prioridad es `.ttml`, después `.lrc` y finalmente `.txt`, siempre al lado de la pista y con el mismo nombre base. Para un módulo, el contenido lo proporciona su ruta de letras y `X-Lyrics-Source` contiene el id de la fuente. LRC conserva sus tiempos y su desplazamiento `offset`; los textos simples no llevan tiempos.
 
 ## Biblioteca por cuenta
 
@@ -133,7 +135,7 @@ Opcionalmente, `POST /playback` con `{trackId,quality?,format?,layout?}` devuelv
 | DELETE | `/following/{artistId}` | Dejar de seguir. |
 | POST | `/library/import` | `{source,deviceId,favorites:[{id}],playlists:[{id,name,tracks:[{id}]}]}`. |
 
-Los metadatos recibidos en escrituras se sustituyen por los del catálogo local. Los clientes pueden enviar sus snapshots completos. Las pistas de favoritos y playlists se devuelven como `{track,addedAt}`. Las playlists personales tienen ids `u…` y pertenecen exclusivamente a su cuenta. La importación admite `source` igual a `ios`, `android` o `web` y es idempotente por cuenta, origen y dispositivo; todos los ids deben existir en este catálogo.
+Los metadatos recibidos en escrituras se sustituyen por los de la fuente correspondiente. Los favoritos y playlists personales pueden combinar pistas de varias fuentes configuradas. Los clientes pueden enviar sus snapshots completos. Las pistas de favoritos y playlists se devuelven como `{track,addedAt}`. Las playlists personales tienen ids `u…` y pertenecen exclusivamente a su cuenta. La importación admite `source` igual a `ios`, `android` o `web` y es idempotente por cuenta, origen y dispositivo; todos los ids deben existir en alguna fuente configurada.
 
 Las escrituras devuelven `rev`; las operaciones idempotentes no lo incrementan. `GET /library?rev=N&catalogRev=HASH` devuelve `304` si no hay cambios. `catalogRev` permite detectar cambios en las playlists M3U guardadas. Los límites se publican en la raíz de la API. Los favoritos y playlists personales conservan su snapshot si después desaparece una pista; reproducirla devuelve `404` hasta que vuelva a estar disponible con ese id.
 
@@ -148,7 +150,7 @@ Solo para `role: admin`:
 | POST | `/admin/users/{username}/password` | `{password}`; revoca las sesiones. |
 | POST | `/admin/users/{username}/revoke` | Revocar todas las sesiones. |
 | DELETE | `/admin/users/{username}` | `{confirm:username}`; no permite borrar la propia cuenta. |
-| POST | `/admin/scan` | Iniciar un escaneo; devuelve `202` sin esperar a que termine. |
+| POST | `/admin/scan` | Iniciar un escaneo local; devuelve `202` sin esperar a que termine. Sin fuente local devuelve `404 LOCAL_SOURCE_DISABLED`. |
 | GET | `/admin/scan` | `{scanning,lastScan,error}`. |
 
 Los nombres de cuenta tienen entre 4 y 64 caracteres `A-Za-z0-9_.-`; las contraseñas, entre 8 y 1024 caracteres. Las bibliotecas se actualizan de forma atómica en SQLite. Los escaneos publican una nueva instantánea completa del catálogo.
@@ -169,4 +171,6 @@ El servidor mantiene la presencia solo en memoria y separada por cuenta. Los con
 {"error":"NOT_FOUND","message":"No existe ese recurso.","requestId":"uuid"}
 ```
 
-Estados principales: `400` petición inválida, `401` sesión inválida, `403` permisos, `404` recurso inexistente, `409` conflicto de orden o revisión, `413` límite excedido, `416` rango inválido, `422` archivo no procesable, `429` límite de acceso y `503` cola de conversiones llena.
+Estados principales: `400` petición inválida, `401` sesión inválida, `403` permisos, `404` recurso inexistente, `409` conflicto de orden o revisión, `413` límite excedido, `416` rango inválido, `422` archivo o formato no procesable, `429` límite de acceso y `503` cola de conversiones llena.
+
+Los módulos no disponibles producen `503 SOURCE_UNAVAILABLE`; las respuestas de módulo que incumplen el contrato producen `502 SOURCE_INVALID_RESPONSE`. El core no reenvía errores privados ni credenciales del módulo. Consulta [MODULES.md](MODULES.md) para configurar fuentes y desarrollar módulos.
