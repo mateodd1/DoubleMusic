@@ -1,6 +1,6 @@
 # Crear un módulo para DoubleMusic
 
-Un módulo es un servidor HTTP que aporta un catálogo y entrega audio. Puede estar escrito en cualquier lenguaje y guardar sus propias credenciales, archivos o cachés. DoubleMusic gestiona las cuentas, sesiones, favoritos, playlists personales, permisos de reproducción y conexiones de los clientes móviles.
+DoubleMusic está centrado en tu biblioteca de archivos locales. Un módulo es una extensión opcional: un servidor HTTP que aporta un catálogo y entrega audio cuando el cliente lo consulta expresamente. Puede estar escrito en cualquier lenguaje y guardar sus propias credenciales, archivos o cachés. DoubleMusic gestiona las cuentas, sesiones, favoritos, playlists personales, permisos de reproducción y conexiones de los clientes móviles.
 
 La instalación normal incluye únicamente la fuente `local`. No incluye ni activa conexiones con plataformas. El administrador puede conectar sus propios módulos con un archivo de configuración. Las fuentes configuradas están disponibles para las cuentas de esa instancia; cada cuenta conserva su biblioteca personal.
 
@@ -65,9 +65,9 @@ Reinicia el core al cambiar la configuración. `origin` debe ser un origen HTTP 
 
 Este token es independiente de las sesiones del core. DoubleMusic no reenvía al módulo el Bearer de un móvil, cookies, contraseñas ni cabeceras arbitrarias. Tampoco expone el secreto ni la dirección privada en la API de clientes. Para rotarlo, actualiza el archivo de ambos servicios y reinícialos.
 
-Se admiten hasta 16 fuentes con ids únicos de 1–32 caracteres `a-z`, `0-9` y `-`, empezando por una letra. El id `local` se reserva para `type: local`; admite `musicDir` si quieres especificar la carpeta dentro del contenedor. `all` está reservado para consultas agregadas. Los demás ids utilizan `type: http`. `defaultSource` debe señalar a una fuente configurada; si se omite, se usa la primera.
+Se admiten hasta 16 fuentes con ids únicos de 1–32 caracteres `a-z`, `0-9` y `-`, empezando por una letra. El id `local` se reserva para `type: local`; admite `musicDir` si quieres especificar la carpeta dentro del contenedor. `all` está reservado para consultas agregadas. Los demás ids utilizan `type: http`. `defaultSource` debe señalar a una fuente configurada; si se omite, se usa `local` cuando exista, con independencia del orden de las entradas. Si no hay fuente local se usa la primera.
 
-Para usar solo módulos, omite la entrada `local`: el servidor no necesita abrir ni escanear una carpeta de música. Las cuentas y bibliotecas siguen guardándose en `DATA_DIR`. El archivo de configuración es del operador; los clientes no pueden registrar URLs de módulos mediante la API.
+Como configuración avanzada, para usar solo módulos omite la entrada `local`: el servidor no necesita abrir ni escanear una carpeta de música. Las cuentas y bibliotecas siguen guardándose en `DATA_DIR`. El archivo de configuración es del operador; los clientes no pueden registrar URLs de módulos mediante la API.
 
 ## Identidad y modelos
 
@@ -179,7 +179,7 @@ El core conserva `Content-Type`, `Content-Length`, `Content-Range`, `Accept-Rang
 
 `GET /api/v1/sources` devuelve la fuente predeterminada, disponibilidad y capacidades. Las listas paginadas utilizan `?source=personal` o `defaultSource` si no se especifica. Para enumerar todo, el cliente pagina cada fuente por separado.
 
-La búsqueda y la portada combinan todas las fuentes por defecto. También aceptan `source=personal` para consultar una o `source=all`. Sus respuestas incluyen `sources:[{id,available,error?}]`, de modo que el cliente pueda mostrar resultados parciales si un módulo no responde. Los ids de fichas y audio ya identifican la fuente y no necesitan otro parámetro.
+La búsqueda, la portada y los estantes utilizan la fuente predeterminada: normalmente la biblioteca local. Conectar módulos no los incorpora automáticamente a esas consultas ni añade llamadas de red a la navegación local. Usa `source=personal` para consultar un módulo o `source=all` para combinar todas las fuentes en búsqueda y portada. Sus respuestas incluyen `sources:[{id,available,error?}]`, de modo que el cliente pueda mostrar resultados parciales si un módulo no responde. Los ids de fichas y audio ya identifican la fuente y no necesitan otro parámetro.
 
 Favoritos, álbumes guardados y playlists personales admiten ids de cualquier fuente configurada. Una playlist puede mezclar pistas locales y de varios módulos. DoubleMusic resuelve los metadatos canónicos de la fuente antes de guardar: no confía en URLs ni títulos que envíe el móvil. Desconectar un módulo no borra los favoritos o snapshots personales existentes.
 

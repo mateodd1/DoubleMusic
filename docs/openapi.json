@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "DoubleMusic Client API",
-    "version": "1.1.0",
-    "description": "API para clientes móviles. Las cuentas y bibliotecas pertenecen a DoubleMusic. Cada id incluye una fuente configurada. Búsqueda y portada combinan fuentes; las listas paginadas usan source o la fuente predeterminada. Los módulos son optativos y solo se conectan mediante configuración del operador."
+    "version": "1.1.1",
+    "description": "API de biblioteca musical local para clientes móviles. DoubleMusic gestiona archivos locales, cuentas y bibliotecas personales. Los módulos HTTP son extensiones opcionales. La navegación, búsqueda y portada utilizan la fuente predeterminada, normalmente local; source=ID consulta una extensión y source=all combina fuentes expresamente en búsqueda y portada."
   },
   "servers": [
     {
@@ -433,7 +433,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; all solo para búsqueda y portada. Se admite provider como alias."
+              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
             }
           }
         ]
@@ -544,7 +544,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; all solo para búsqueda y portada. Se admite provider como alias."
+              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
             }
           }
         ]
@@ -655,7 +655,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; all solo para búsqueda y portada. Se admite provider como alias."
+              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
             }
           }
         ]
@@ -766,7 +766,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; all solo para búsqueda y portada. Se admite provider como alias."
+              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
             }
           }
         ]
@@ -850,7 +850,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; all solo para búsqueda y portada. Se admite provider como alias."
+              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
             }
           }
         ]
@@ -888,7 +888,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; all solo para búsqueda y portada. Se admite provider como alias."
+              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
             }
           }
         ]
@@ -926,7 +926,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; all solo para búsqueda y portada. Se admite provider como alias."
+              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
             }
           }
         ]
@@ -964,7 +964,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Id de fuente; all solo para búsqueda y portada. Se admite provider como alias."
+              "description": "Id de fuente; si se omite se usa defaultSource, que prioriza local. all combina fuentes expresamente en búsqueda y portada. provider es un alias de source."
             }
           }
         ]

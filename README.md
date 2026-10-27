@@ -1,20 +1,10 @@
 # DoubleMusic
 
-Servidor para tu propia biblioteca musical, con API para clientes móviles DuoMusic y una interfaz HTTP versionada para módulos creados por cada usuario. Puedes servir archivos descargados, conectar tus propios módulos o combinar ambas fuentes. El audio se prepara y entrega desde el servidor.
+Servidor para organizar y reproducir tu biblioteca de archivos de música desde tus clientes móviles. DoubleMusic indexa una carpeta local, lee sus metadatos y sirve el audio desde tu servidor. Puedes ampliarlo con módulos opcionales conectados mediante una API HTTP documentada.
 
 Incluye usuarios con sesiones revocables, favoritos, playlists personales, álbumes guardados, artistas seguidos, playlists M3U, portadas y letras locales, streaming con saltos por rangos de bytes y control entre dispositivos mediante Connect.
 
-La única fuente incluida y activada por defecto es la biblioteca local, que funciona sin acceso a Internet una vez instalada. Los módulos son servicios optativos que implementa el usuario; no se incluye ninguna integración con plataformas. El núcleo utiliza Node.js 22.13 o posterior, SQLite integrado, FFmpeg/FFprobe y `ws` para WebSocket.
-
-## API e interfaz de módulos
-
-- [API para clientes móviles](docs/API.md) y [contrato OpenAPI](docs/openapi.json).
-- [Guía para crear módulos](docs/MODULES.md) y [contrato OpenAPI de módulos](docs/module-openapi.json).
-- [Módulo de referencia ejecutable](examples/module/server.js), con audio de muestra generado localmente.
-
-Cada módulo implementa `/module/v1`: catálogo, búsqueda, pistas, audio, imágenes y letras. DoubleMusic mantiene las cuentas, permisos, favoritos y playlists; los clientes siguen usando `/api/v1`. El operador conecta módulos mediante `SOURCES_FILE`. No hay que modificar el núcleo ni añadir dependencias de una plataforma al servidor.
-
-Los contratos también se sirven en `/api/v1/openapi.json` y `/api/v1/modules/openapi.json`. El ejemplo y su configuración optativa están explicados en [MODULES.md](docs/MODULES.md).
+La biblioteca local es el centro del servidor: el catálogo, la portada y la búsqueda utilizan tus archivos por defecto y funcionan sin acceso a Internet una vez instalado. Los módulos son extensiones optativas creadas por el usuario y se consultan expresamente por API; no se incluye ninguna integración con plataformas. El núcleo utiliza Node.js 22.13 o posterior, SQLite integrado, FFmpeg/FFprobe y `ws` para WebSocket.
 
 ## Inicio con Docker
 
@@ -63,6 +53,18 @@ En la fuente local, `GET /api/v1/audio/{id}` sirve el archivo original. Con `lay
 En fMP4, la calidad `original` conserva AAC, ALAC, FLAC y Opus. Los demás códecs se convierten a AAC a 320 kbps. Para obtener siempre los bytes originales se usa `quality=original&format=original`. La compatibilidad final del códec depende del reproductor del móvil.
 
 Este servidor implementa el contrato v1 de DuoMusic; el cliente debe permitir configurar el origen del servicio y conservar ids completos `fuente:id`; la biblioteca local utiliza `local:`. La documentación de integración está en [docs/API.md](docs/API.md). Las pruebas HTTP validan el contrato y los archivos de audio; no sustituyen la comprobación en cada versión de las apps móviles.
+
+## Ampliar la biblioteca con módulos por API
+
+- [API para clientes móviles](docs/API.md) y [contrato OpenAPI](docs/openapi.json).
+- [Guía para crear módulos](docs/MODULES.md) y [contrato OpenAPI de módulos](docs/module-openapi.json).
+- [Módulo de referencia ejecutable](examples/module/server.js), con audio de muestra generado localmente.
+
+Conectar un módulo mantiene la navegación habitual en tu biblioteca local. Para consultar una extensión se usa `source=ID`; `source=all` permite buscar o mostrar contenido de todas las fuentes. Los módulos no copian ni descargan automáticamente su catálogo a la carpeta local.
+
+Cada módulo implementa `/module/v1`: catálogo, búsqueda, pistas, audio, imágenes y letras. DoubleMusic mantiene las cuentas, permisos, favoritos y playlists; los clientes siguen usando `/api/v1`. El operador conecta módulos mediante `SOURCES_FILE`. No hay que modificar el núcleo ni añadir dependencias de una plataforma al servidor.
+
+Los contratos también se sirven en `/api/v1/openapi.json` y `/api/v1/modules/openapi.json`. El ejemplo y su configuración optativa están explicados en [MODULES.md](docs/MODULES.md).
 
 ## Configuración
 

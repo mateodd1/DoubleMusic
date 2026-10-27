@@ -3,7 +3,7 @@ const { reference } = require('../models');
 const { ApiError, invalid } = require('../errors');
 
 class SourceRegistry {
-  constructor(sources, defaultSource = sources[0]?.id) {
+  constructor(sources, defaultSource = sources.some(source => source.id === 'local') ? 'local' : sources[0]?.id) {
     if (!sources.length || sources.length > 16 || new Set(sources.map(s => s.id)).size !== sources.length) throw new Error('Configura entre 1 y 16 fuentes con ids únicos.');
     if (sources.some(source => source.id === 'all')) throw new Error('El id all se reserva para consultas agregadas.');
     this.sources = new Map(sources.map(source => [source.id, source]));
@@ -13,7 +13,7 @@ class SourceRegistry {
   info() { return [...this.sources.values()].map(({ id, name, type }) => ({ id, name, type })); }
   source(id) { const source = this.sources.get(id); if (!source) throw new ApiError(404, 'SOURCE_NOT_FOUND', 'La fuente no está configurada.'); return source; }
   resource(id) { return this.source(reference(id).provider); }
-  selection(id) { return !id || id === 'all' ? [...this.sources.values()] : [this.source(id)]; }
+  selection(id) { return id === 'all' ? [...this.sources.values()] : [this.source(id || this.defaultSource)]; }
   async health() {
     return Object.fromEntries(await Promise.all([...this.sources.values()].map(async source => {
       try { return [source.id, { ...await source.health(), id: source.id, name: source.name, type: source.type }]; }

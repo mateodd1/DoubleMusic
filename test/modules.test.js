@@ -73,7 +73,7 @@ test('contrato de módulos: ejemplo HTTP y núcleo independientes de plataformas
   await t.test('catálogos por fuente e ids sin colisiones', async () => {
     const local = await (await get('/api/v1/catalog/tracks')).json(); assert.equal(local.total, 0);
     const page = await (await get('/api/v1/catalog/tracks?source=personal&limit=1')).json(); assert.equal(page.total, 1); assert.equal(page.tracks[0].id, 'personal:track-1');
-    const search = await (await get('/api/v1/catalog/search?q=ejemplo')).json(); assert.deepEqual(search.tracks.map(t => t.id).sort(), ['other:track-1', 'personal:track-1']);
+    const search = await (await get('/api/v1/catalog/search?q=ejemplo&source=all')).json(); assert.deepEqual(search.tracks.map(t => t.id).sort(), ['other:track-1', 'personal:track-1']);
     const selected = await (await get('/api/v1/catalog/search?q=ejemplo&source=personal')).json(); assert.equal(selected.tracks.length, 1);
     assert.equal((await get('/api/v1/catalog/tracks?source=unconfigured')).status, 404);
     assert.equal((await get('/api/v1/catalog/tracks?source=all')).status, 400);
@@ -82,6 +82,19 @@ test('contrato de módulos: ejemplo HTTP y núcleo independientes de plataformas
       const data = await res.json(); assert.equal((data.artist && kind === 'artists' ? data.artist : data).id, 'personal:' + id);
     }
     const artist = await (await get('/api/v1/catalog/artists/personal%3Aartist-1/tracks')).json(); assert.equal(artist.tracks[0].id, 'personal:track-1');
+  });
+  await t.test('la navegación y la búsqueda local no consultan módulos configurados', async () => {
+    const before = f.requests.length;
+    for (const route of ['/api/v1/catalog/search?q=ejemplo', '/api/v1/catalog/featured', '/api/v1/catalog/daily', '/api/v1/catalog/discovery']) {
+      const res = await get(route); assert.equal(res.status, 200);
+      const data = await res.json(); assert.deepEqual(data.sources.map(source => source.id), ['local']);
+      if (data.tracks) assert.deepEqual(data.tracks, []);
+    }
+    assert.equal(f.requests.length, before, 'Configurar módulos no debe añadir llamadas a la navegación local');
+    const ordered = new SourceRegistry([f.personal, f.sources.source('local')]);
+    assert.equal(ordered.defaultSource, 'local', 'La biblioteca local debe ser la predeterminada aunque se configure después de un módulo');
+    const explicit = new SourceRegistry([f.sources.source('local'), f.personal], 'personal');
+    assert.equal(explicit.defaultSource, 'personal', 'Una configuración explícita del administrador sigue siendo válida');
   });
   await t.test('favoritos y playlists mezclan fuentes con permisos por cuenta', async () => {
     const res = await send('/api/v1/library/favorites/personal%3Atrack-1', 'PUT', { track: { id: 'personal:track-1', title: 'Injected', coverUrl: 'https://outside.example.test' } }); assert.equal(res.status, 200);
@@ -115,7 +128,9 @@ test('contrato de módulos: ejemplo HTTP y núcleo independientes de plataformas
     f.state.mode = 'down';
     try {
       const res = await get('/api/v1/catalog/tracks/personal%3Atrack-1'); assert.equal(res.status, 503); assert.ok(!(await res.text()).includes(f.moduleToken));
-      const featured = await (await get('/api/v1/catalog/featured')).json(); assert.equal(featured.sources.find(s => s.id === 'local').available, true); assert.equal(featured.sources.find(s => s.id === 'personal').available, false);
+      const before = f.requests.length;
+      const local = await (await get('/api/v1/catalog/featured')).json(); assert.deepEqual(local.sources, [{ id: 'local', available: true }]); assert.equal(f.requests.length, before);
+      const featured = await (await get('/api/v1/catalog/featured?source=all')).json(); assert.equal(featured.sources.find(s => s.id === 'local').available, true); assert.equal(featured.sources.find(s => s.id === 'personal').available, false);
       const library = await (await get('/api/v1/library')).json(); assert.equal(library.savedPlaylists[0].available, false); assert.equal(library.favorites.length, 1);
       assert.equal((await get('/api/v1/auth/me')).status, 200);
     } finally { f.state.mode = 'normal'; }

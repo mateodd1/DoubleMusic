@@ -26,6 +26,6 @@ async function loadSources(file = process.env.SOURCES_FILE, { logger = console }
       sources.push(new HttpSource({ id: entry.id, name: entry.name, origin: entry.origin, token }));
     } else throw new Error('Tipo de fuente no soportado: usa local con id local, o http con otro id.');
   }
-  return { sources: new SourceRegistry(sources, config.defaultSource || sources[0].id), catalog };
+  return { sources: new SourceRegistry(sources, config.defaultSource), catalog };
 }
 module.exports = { loadSources };
