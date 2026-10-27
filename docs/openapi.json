@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "DoubleMusic Client API",
-    "version": "1.2.1",
+    "version": "1.3.0",
     "description": "Local music library API for mobile clients. library.enabled enables the local library (true by default); external.enabled allows optional external connections (false by default). Configure them in SOURCES_FILE and restart to apply changes. Browsing uses the default source, normally local. Accounts are preserved when sources are disabled. With both features disabled, the catalog is empty and defaultSource is null."
   },
   "servers": [
@@ -4535,6 +4535,20 @@
           },
           "configuration": {
             "$ref": "#/components/schemas/Configuration"
+          },
+          "runtime": {
+            "type": "object",
+            "description": "Execution runtimes in the default deployment. Catalog and media remain in a private worker.",
+            "properties": {
+              "core": {
+                "type": "string",
+                "example": "rust"
+              },
+              "catalog": {
+                "type": "string",
+                "example": "node"
+              }
+            }
           }
         }
       },

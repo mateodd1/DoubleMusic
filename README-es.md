@@ -4,7 +4,7 @@ Servidor para organizar y reproducir tu biblioteca de archivos de música desde 
 
 Incluye usuarios con sesiones revocables, favoritos, playlists personales, álbumes guardados, artistas seguidos, playlists M3U, portadas y letras locales, streaming con saltos por rangos de bytes y control entre dispositivos mediante Connect.
 
-La biblioteca local es el centro del servidor: el catálogo, la portada y la búsqueda utilizan tus archivos por defecto y funcionan sin acceso a Internet una vez instalado. Las conexiones externas son optativas, están desactivadas por defecto y se consultan expresamente por API. El proyecto está orientado a música propia o autorizada y a servicios utilizados con los permisos correspondientes; consulta [el alcance de uso](docs/USAGE.md). El núcleo utiliza Node.js 22.13 o posterior, SQLite integrado, FFmpeg/FFprobe y `ws` para WebSocket.
+La biblioteca local es el centro del servidor: el catálogo, la portada y la búsqueda utilizan tus archivos por defecto y funcionan sin acceso a Internet una vez instalado. Las conexiones externas son optativas, están desactivadas por defecto y se consultan expresamente por API. El proyecto está orientado a música propia o autorizada y a servicios utilizados con los permisos correspondientes; consulta [el alcance de uso](docs/USAGE.md). El núcleo público utiliza Rust, Axum/Tokio y SQLite para cuentas, sesiones, bibliotecas personales y Connect. Un proceso Node.js 22.13+ privado conserva el catálogo local, FFmpeg/FFprobe y las conexiones externas optativas. Ambos se ejecutan en el mismo contenedor Docker; solo se expone Rust. Consulta [la arquitectura y migración](docs/RUNTIME.md).
 
 ## Inicio con Docker
 
@@ -132,10 +132,11 @@ Las fuentes se configuran para la instancia; las cuentas son independientes y su
 
 ## Ejecución directa y pruebas
 
-Con Node.js 22.13+ y FFmpeg/FFprobe instalados:
+Con Rust 1.98, Node.js 22.13+ y FFmpeg/FFprobe instalados:
 
 ```bash
 npm ci --ignore-scripts
+cargo build --manifest-path core-rust/Cargo.toml --release --locked
 MUSIC_DIR=/ruta/musica DATA_DIR=/ruta/datos PUBLIC_URL=http://localhost:3000 npm start
 npm test
 ```

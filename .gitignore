@@ -7,3 +7,4 @@ coverage/
 *.log
 secrets/
 /sources.json
+core-rust/target/

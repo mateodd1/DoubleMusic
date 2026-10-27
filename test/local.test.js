@@ -1,4 +1,5 @@
 'use strict';
+const { apiOrigin } = require('./runtime');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const os = require('node:os');
@@ -35,7 +36,7 @@ async function fixture(t, { empty = false } = {}) {
   const server = createApp({ store, catalog, media, auth, logger, publicUrl: 'https://music.example.test' });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   t.after(async () => { server.connect.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); store.close(); });
-  const base = `http://127.0.0.1:${server.address().port}`;
+  const base = await apiOrigin(t, server, store, 'https://music.example.test');
   const request = async (route, { token, method = 'GET', body, headers = {} } = {}) => fetch(base + route, { method, headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...headers }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   const login = async username => { const res = await request('/api/v1/auth/login', { method: 'POST', body: { username, password: 'local-test-password', transport: 'bearer' } }); assert.equal(res.status, 200); return (await res.json()).session.token; };
   return { directory, root, dataDir, albumDir, catalog, media, store, server, request, login };

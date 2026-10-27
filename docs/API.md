@@ -4,6 +4,8 @@ Complete contract and models: [client OpenAPI](openapi.json), also available at 
 
 Clients configure the server origin, such as `https://music.example.com`, and append `/api/v1` to API routes. Use the same origin for JSON, artwork, lyrics, audio, and Connect. Clients do not connect directly to modules. Deploy the service at the domain root.
 
+Discovery includes `runtime: { "core": "rust", "catalog": "node" }` in the default deployment. Accounts, personal libraries, and Connect run in Rust; catalog and media use a private worker. This does not change the client or extension contracts. See [runtime architecture](RUNTIME.md).
+
 ## Sessions
 
 `POST /api/v1/auth/login`, with `Content-Type: application/json`:

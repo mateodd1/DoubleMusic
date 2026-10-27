@@ -6,7 +6,7 @@ A server for organizing and playing your music file library from your mobile cli
 
 Features include user accounts with revocable sessions, favorites, personal playlists, saved albums, followed artists, M3U playlists, local artwork and lyrics, byte-range streaming and seeking, and cross-device control through Connect.
 
-The local library is the center of the server: browsing, featured content, and search use your files by default and work without Internet access after installation. External connections are optional, disabled by default, and queried explicitly through the API. The project is intended for your own or authorized music and services used with the appropriate permissions; see the [usage scope](docs/USAGE.md). The core uses Node.js 22.13 or later, built-in SQLite, FFmpeg/FFprobe, and `ws` for WebSocket support.
+The local library is the center of the server: browsing, featured content, and search use your files by default and work without Internet access after installation. External connections are optional, disabled by default, and queried explicitly through the API. The project is intended for your own or authorized music and services used with the appropriate permissions; see the [usage scope](docs/USAGE.md). The public core uses Rust with Axum/Tokio and SQLite. A private Node.js 22.13+ worker handles the local catalog, FFmpeg/FFprobe audio processing, and optional external connections. Accounts, sessions, personal libraries, and Connect run natively in Rust. Both processes run in the same Docker container; only the Rust API is exposed. See [runtime architecture and migration](docs/RUNTIME.md).
 
 ## Getting started with Docker
 
@@ -33,7 +33,7 @@ unset MUSIC_PASSWORD
 
 In your mobile client, configure **the same URL as `PUBLIC_URL`, without adding `/api/v1`**, and sign in with that account. Your HTTPS proxy must forward all routes to this service, including WebSocket connections. For local network testing, use `http://SERVER_IP:3000` if your client allows HTTP.
 
-Music is mounted read-only. The `library-data` Docker volume stores accounts, personal libraries, the index, and the audio cache. The initial scan finishes before the port opens; large libraries may take some time. The index then refreshes every five minutes, reusing metadata for unchanged files.
+Music is mounted read-only. The `library-data` Docker volume stores accounts, personal libraries, the index, and the audio cache. The Rust core starts its catalog worker on loopback port 3001; the initial scan finishes before the public port opens; large libraries may take some time. The index then refreshes every five minutes, reusing metadata for unchanged files.
 
 ## Library
 
@@ -134,12 +134,15 @@ Sources are configured for the instance. Accounts are independent, with their fa
 
 ## Running directly and testing
 
-With Node.js 22.13+ and FFmpeg/FFprobe installed:
+With Rust 1.98 (pinned in `rust-toolchain.toml`), Node.js 22.13+, and FFmpeg/FFprobe installed:
 
 ```bash
 npm ci --ignore-scripts
+cargo build --manifest-path core-rust/Cargo.toml --release --locked
 MUSIC_DIR=/path/to/music DATA_DIR=/path/to/data PUBLIC_URL=http://localhost:3000 npm start
 npm test
+cargo test --manifest-path core-rust/Cargo.toml --locked
+RUST_CORE_BIN="$PWD/core-rust/target/release/doublemusic-core" CONNECT_DISABLED=true npm test
 ```
 
 `DATA_DIR` must be outside the library. When creating accounts directly, use the same `DATA_DIR` with `node cli.js`. Tests generate their own audio and temporary accounts, and check the catalog, sessions, libraries, Connect, ranges, fMP4, conversions, and filesystem access boundaries.
@@ -149,4 +152,6 @@ You can also run tests against the Docker image with networking disabled:
 ```bash
 docker build -t doublemusic:test .
 docker run --rm --network none -v "$PWD/test:/app/test:ro" doublemusic:test npm test
+docker run --rm --network none -e RUST_CORE_BIN=/usr/local/bin/doublemusic-core \
+  -e CONNECT_DISABLED=true -v "$PWD/test:/app/test:ro" doublemusic:test npm test
 ```

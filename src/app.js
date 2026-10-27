@@ -242,7 +242,7 @@ function createApp({ store, catalog, media, sources = new SourceRegistry([new Lo
   });
   server.on('clientError', (_error, socket) => { if (socket.writable) socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n'); });
   const origins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(value => new URL(value.trim()).origin) : publicUrl ? [publicUrl] : [];
-  server.connect = attachConnect(server, auth, { origins, publicUrl, ...connectOptions });
+  server.connect = process.env.CONNECT_DISABLED === 'true' ? { close() {} } : attachConnect(server, auth, { origins, publicUrl, ...connectOptions });
   return server;
 }
 module.exports = { createApp };

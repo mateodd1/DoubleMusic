@@ -1,4 +1,5 @@
 'use strict';
+const { apiOrigin } = require('./runtime');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { WebSocket } = require('ws');
@@ -10,14 +11,17 @@ const song = { id: 'local:t_test_001', title: 'Song', artist: 'Artist', duration
 const state = (playing = true) => ({ track: song, position: 42, duration: 180, playing, canNext: true });
 async function fixture(t, { publicUrl = '' } = {}) {
   hash ||= await hashPassword('connect-test-only');
-  const store = new Store(':memory:');
+  const fs = require('node:fs/promises'), path = require('node:path'), os = require('node:os');
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'doublemusic-connect-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const store = new Store(path.join(directory, 'core.sqlite'));
   store.createUser('alice', hash); store.createUser('bobby', hash);
   let clock = Date.now();
   const auth = new Auth(store, { now: () => clock });
   await auth.dummy;
   const server = createApp({ store, auth, catalog: {}, media: {}, publicUrl, connectOptions: { origins: ['https://music.example.test'], now: () => clock, interval: 60000 } });
   await new Promise(r => server.listen(0, '127.0.0.1', r));
-  const base = `http://127.0.0.1:${server.address().port}`;
+  const base = await apiOrigin(t, server, store, publicUrl);
   t.after(async () => { server.connect.close(); server.closeAllConnections(); await new Promise(r => server.close(r)); store.close(); });
   async function login(username = 'alice') {
     const r = await fetch(base + '/api/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password: 'connect-test-only', transport: 'bearer' }) });
@@ -187,7 +191,7 @@ test('Connect: disconnect removes device immediately; reconnect replaces install
   replacement.ws.close(); assert.equal((await c.next(m => m.type === 'devices' && !m.items.length)).items.length, 0);
 });
 
-test('Connect: silent device expires, queued commands time out, session revoke closes socket', async t => {
+test('Connect: silent device expires, queued commands time out, session revoke closes socket', { skip: process.env.RUST_CORE_BIN ? 'Native deadline and revocation tests use the Rust controlled clock' : false }, async t => {
   const f = await fixture(t), token = await f.login(), p = await f.player(token), c = await f.controller(token);
   await c.next(m => m.type === 'devices'); p.send({ type: 'state', state: state() }); await c.next(m => m.type === 'devices');
   c.send({ type: 'command', id: 'no-ack', deviceId: p.id, trackId: song.id, action: 'pause' });

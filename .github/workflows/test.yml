@@ -9,6 +9,15 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - run: rustup show
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: npm ci --ignore-scripts
+      - run: cargo fmt --manifest-path core-rust/Cargo.toml --check
+      - run: cargo clippy --manifest-path core-rust/Cargo.toml --locked --all-targets -- -D warnings
+      - run: cargo test --manifest-path core-rust/Cargo.toml --locked
+      - run: cargo build --manifest-path core-rust/Cargo.toml --locked
       - run: npm test
+      - run: RUST_CORE_BIN="$PWD/core-rust/target/debug/doublemusic-core" CONNECT_DISABLED=true npm test
+      - run: docker build -t doublemusic:test .
+      - run: docker run --rm --network none -e RUST_CORE_BIN=/usr/local/bin/doublemusic-core -e CONNECT_DISABLED=true -v "$PWD/test:/app/test:ro" doublemusic:test npm test
+      - run: npm run test:container

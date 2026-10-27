@@ -1,4 +1,5 @@
 'use strict';
+const { apiOrigin } = require('./runtime');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
@@ -43,12 +44,12 @@ async function fixture(t) {
   const catalog = await new LocalCatalog({ root: music, dataDir: path.join(directory, 'index') }).init();
   const media = await new LocalMedia(catalog).init();
   const sources = new SourceRegistry([new LocalSource(catalog, media), personal, other], 'local');
-  const store = new Store(':memory:'), hash = await hashPassword('module-client-password');
+  const store = new Store(path.join(directory, 'core.sqlite')), hash = await hashPassword('module-client-password');
   store.createUser('alice', hash); store.createUser('bobby', hash);
   const server = createApp({ store, catalog, sources, publicUrl: 'https://music.example.test', logger: { error() {} } });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   t.after(async () => { server.connect.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); store.close(); });
-  const base = `http://127.0.0.1:${server.address().port}`;
+  const base = await apiOrigin(t, server, store, 'https://music.example.test');
   const request = (route, { token, method = 'GET', body, headers = {} } = {}) => fetch(base + route, { method, headers: { ...headers, ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   const login = async username => { const res = await request('/api/v1/auth/login', { method: 'POST', body: { username, password: 'module-client-password', transport: 'bearer' } }); assert.equal(res.status, 200); return (await res.json()).session.token; };
   return { directory, sources, catalog, personal, origin, moduleToken, state, requests, request, login };
@@ -197,11 +198,11 @@ test('module contract: platform-independent HTTP example and core', async t => {
     const before = f.requests.length;
     const loaded = await loadSettings({ library: { enabled: false, musicDir: '/nonexistent-library' }, external: { enabled: false }, defaultSource: 'personal', sources: [{ ...moduleEntry, tokenFile: 'does-not-exist', origin: 'invalid-origin' }] });
     assert.equal(loaded.catalog, null); assert.equal(loaded.sources.defaultSource, null); assert.deepEqual(await loaded.sources.health(), {});
-    const store = new Store(':memory:'); store.createUser('admin', await hashPassword('switches-test-password'), 'admin');
+    const store = new Store(path.join(f.directory, 'disabled-core.sqlite')); store.createUser('admin', await hashPassword('switches-test-password'), 'admin');
     const server = createApp({ store, catalog: loaded.catalog, sources: loaded.sources, logger: { error() {} } });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     t.after(async () => { server.connect.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); store.close(); });
-    const base = `http://127.0.0.1:${server.address().port}`;
+    const base = await apiOrigin(t, server, store, 'https://music.example.test');
     const login = await fetch(base + '/api/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: 'switches-test-password', transport: 'bearer' }) });
     assert.equal(login.status, 200); const headers = { Authorization: 'Bearer ' + (await login.json()).session.token };
     for (const route of ['/api/v1/catalog/tracks', '/api/v1/catalog/albums']) { const res = await fetch(base + route, { headers }); assert.equal(res.status, 200); assert.equal((await res.json()).total, 0); }
