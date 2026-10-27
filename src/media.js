@@ -12,7 +12,10 @@ async function serveFile(req, res, file, type, { publicCache = false } = {}) {
   const handle = await fs.open(file, 'r');
   try {
     const stat = await handle.stat(), size = stat.size;
-    const etag = `"${hash(`${stat.ino}:${size}:${stat.mtimeMs}`).slice(0, 32)}"`;
+    // La actualización de acceso de la caché conserva mtime con precisión de
+    // Date (milisegundos). Normalizar aquí evita cambiar el ETag por perder
+    // fracciones de milisegundo tras la primera petición de una conversión.
+    const etag = `"${hash(`${stat.ino}:${size}:${stat.mtime.getTime()}`).slice(0, 32)}"`;
     res.setHeader('Content-Type', type || MIME[path.extname(file).toLowerCase()] || 'application/octet-stream');
     res.setHeader('Accept-Ranges', 'bytes'); res.setHeader('ETag', etag);
     res.setHeader('Last-Modified', stat.mtime.toUTCString());

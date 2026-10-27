@@ -88,6 +88,7 @@ test('API local completa, con archivos reales y sin servicios de red', async t =
     const file = path.join(f.directory, 'output.mp4'); await fs.writeFile(file, data);
     const parsed = await probe(file); assert.equal(parsed.streams[0].codec_name, 'aac'); assert.ok(Number(parsed.format.duration) >= 13);
     const head = await f.request(route, { token, method: 'HEAD' }); const etag = head.headers.get('etag');
+    assert.equal(etag, res.headers.get('etag'), 'La primera conversión y su siguiente lectura deben conservar el ETag');
     const partial = await f.request(route, { token, headers: { Range: 'bytes=200-399', 'If-Range': etag } }); assert.equal(partial.status, 206); assert.equal(partial.headers.get('etag'), etag); assert.deepEqual(Buffer.from(await partial.arrayBuffer()), data.subarray(200, 400));
     const conditional = await f.request(route, { token, headers: { 'If-None-Match': etag } }); assert.equal(conditional.status, 304);
     const descriptor = await (await send('/api/v1/playback', 'POST', { trackId: song.id, quality: '192', layout: 2 })).json(); assert.equal(descriptor.info.codec, 'aac'); assert.match(descriptor.audioUrl, /^https:\/\/music\.example\.test\/api\/v1\/audio\//);
