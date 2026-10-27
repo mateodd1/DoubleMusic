@@ -2,7 +2,7 @@
 
 DoubleMusic está centrado en tu biblioteca de archivos locales. Un módulo es una extensión opcional: un servidor HTTP que aporta un catálogo y entrega audio cuando el cliente lo consulta expresamente. Puede estar escrito en cualquier lenguaje y guardar sus propias credenciales, archivos o cachés. DoubleMusic gestiona las cuentas, sesiones, favoritos, playlists personales, permisos de reproducción y conexiones de los clientes móviles.
 
-La instalación normal incluye únicamente la fuente `local`. No incluye ni activa conexiones con plataformas. El administrador puede conectar sus propios módulos con un archivo de configuración. Las fuentes configuradas están disponibles para las cuentas de esa instancia; cada cuenta conserva su biblioteca personal.
+La instalación normal activa `library.enabled` y mantiene `external.enabled` desactivado. Las conexiones externas son extensiones optativas para contenidos y servicios cuyo uso esté autorizado; [el alcance del proyecto](USAGE.md) describe este enfoque. El administrador puede conectar sus propios módulos con un archivo de configuración. Las fuentes configuradas están disponibles para las cuentas de esa instancia; cada cuenta conserva su biblioteca personal.
 
 ## Dos contratos separados
 
@@ -45,6 +45,8 @@ Configura `SOURCES_FILE` con la ruta de un JSON que montes en el contenedor del 
 ```json
 {
   "version": 1,
+  "library": { "enabled": true },
+  "external": { "enabled": true },
   "defaultSource": "local",
   "sources": [
     {"id":"local","type":"local"},
@@ -59,6 +61,10 @@ Configura `SOURCES_FILE` con la ruta de un JSON que montes en el contenedor del 
 }
 ```
 
+`library.enabled` es `true` por defecto y controla el escaneo y acceso a la carpeta local. `external.enabled` es `false` por defecto: las entradas HTTP de `sources` solo se cargan al activarlo. Una entrada con `enabled: false` sigue desactivada aunque se permitan conexiones externas. Las entradas desactivadas no requieren leer su token ni contactar con su servidor y no aparecen en `/api/v1/sources`.
+
+El núcleo conserva cuentas, sesiones, favoritos y playlists al cambiar estos interruptores. Si desactivas ambas partes, inicia normalmente con catálogo vacío y `defaultSource: null`. Si desactivas la fuente predeterminada, selecciona `local` cuando esté activa o la primera fuente activa; no intenta conectarse a una fuente desactivada. El interruptor de conexiones gobierna las llamadas de DoubleMusic; el proceso del módulo se administra por separado.
+
 Reinicia el core al cambiar la configuración. `origin` debe ser un origen HTTP o HTTPS sin ruta, query, fragmento ni credenciales. HTTP sirve para una red Docker privada; el módulo puede publicarse por HTTPS si está en otra máquina. No se siguen redirecciones.
 
 `tokenFile` contiene un token de entre 16 y 512 caracteres `A-Za-z0-9._~-`. Puede ser una ruta absoluta o relativa al archivo JSON. DoubleMusic lo lee al arrancar y envía `Authorization: Bearer TOKEN_DEL_MODULO` en sus llamadas al módulo, incluidas imágenes y audio. El módulo debe validar ese token en todas sus rutas.
@@ -67,7 +73,7 @@ Este token es independiente de las sesiones del core. DoubleMusic no reenvía al
 
 Se admiten hasta 16 fuentes con ids únicos de 1–32 caracteres `a-z`, `0-9` y `-`, empezando por una letra. El id `local` se reserva para `type: local`; admite `musicDir` si quieres especificar la carpeta dentro del contenedor. `all` está reservado para consultas agregadas. Los demás ids utilizan `type: http`. `defaultSource` debe señalar a una fuente configurada; si se omite, se usa `local` cuando exista, con independencia del orden de las entradas. Si no hay fuente local se usa la primera.
 
-Como configuración avanzada, para usar solo módulos omite la entrada `local`: el servidor no necesita abrir ni escanear una carpeta de música. Las cuentas y bibliotecas siguen guardándose en `DATA_DIR`. El archivo de configuración es del operador; los clientes no pueden registrar URLs de módulos mediante la API.
+Como configuración avanzada, para usar solo conexiones externas configura `library.enabled: false` y `external.enabled: true`: el servidor no necesita abrir ni escanear una carpeta de música. Las cuentas y bibliotecas siguen guardándose en `DATA_DIR`. Si `local` no figura en `sources`, se añade automáticamente cuando `library.enabled` está activado. `sources` se puede omitir si solo usas la biblioteca local. El archivo de configuración es del operador; los clientes no pueden registrar URLs de módulos mediante la API.
 
 ## Identidad y modelos
 
@@ -177,7 +183,7 @@ El core conserva `Content-Type`, `Content-Length`, `Content-Range`, `Accept-Rang
 
 ## Selección de fuentes desde un cliente
 
-`GET /api/v1/sources` devuelve la fuente predeterminada, disponibilidad y capacidades. Las listas paginadas utilizan `?source=personal` o `defaultSource` si no se especifica. Para enumerar todo, el cliente pagina cada fuente por separado.
+`GET /api/v1/sources` devuelve la configuración efectiva en `configuration.library.enabled` y `configuration.external.enabled`, junto con la fuente predeterminada, disponibilidad y capacidades de las fuentes activas. Las listas paginadas utilizan `?source=personal` o `defaultSource` si no se especifica. Para enumerar todo, el cliente pagina cada fuente por separado.
 
 La búsqueda, la portada y los estantes utilizan la fuente predeterminada: normalmente la biblioteca local. Conectar módulos no los incorpora automáticamente a esas consultas ni añade llamadas de red a la navegación local. Usa `source=personal` para consultar un módulo o `source=all` para combinar todas las fuentes en búsqueda y portada. Sus respuestas incluyen `sources:[{id,available,error?}]`, de modo que el cliente pueda mostrar resultados parciales si un módulo no responde. Los ids de fichas y audio ya identifican la fuente y no necesitan otro parámetro.
 
@@ -198,3 +204,5 @@ Los documentos JSON del módulo están limitados a 8 MiB, el manifiesto a 16 KiB
 5. Detén tu módulo: el core debe seguir autenticando y sirviendo las demás fuentes.
 
 `npm test` ejecuta el módulo de referencia y comprueba esos recorridos, aislamiento de credenciales, errores, redirecciones, límites de acceso y compatibilidad con la biblioteca local. Puedes tomar [test/modules.test.js](../test/modules.test.js) como guía para probar tu propio servidor HTTP.
+
+Al actualizar desde una configuración de conexiones anterior a 1.2.0, añade `external: { "enabled": true }` para autorizar expresamente su activación. Sin ese permiso, el servidor solo utiliza la biblioteca local habilitada.

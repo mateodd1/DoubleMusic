@@ -78,7 +78,7 @@ La duración se expresa en segundos, el bitrate en kbps y la frecuencia en Hz. L
 | `/catalog/playlists/{id}` | Playlist con sus `tracks`. |
 | `/catalog/daily`, `/catalog/discovery` | `{generatedAt,shelves:[{title,items}]}` con las playlists locales. |
 | `/catalog/artwork/{idDePista}` | Imagen local; acepta HEAD. |
-| `/sources`, `/providers` | `{defaultSource,items:{id:{id,name,type,available,capabilities?,error?}}}`. |
+| `/sources`, `/providers` | `{defaultSource,configuration:{library:{enabled},external:{enabled}},items:{id:{id,name,type,available,capabilities?,error?}}}`. Solo enumera fuentes activas. |
 
 Las listas paginadas aceptan `limit` entre 1 y 500, por defecto 200, y `offset` no negativo, por defecto 0. Admiten `source=ID` y usan la fuente predeterminada si se omite. Para enumerar todas las fuentes, pagina cada una por separado. La búsqueda, la portada y los estantes utilizan también la fuente predeterminada, que es la biblioteca local cuando está configurada y no se ha indicado otra expresamente. Conectar módulos no añade consultas a la navegación local. `source=ID` selecciona una extensión y `source=all` combina las fuentes en búsqueda y portada; las respuestas incluyen su disponibilidad en `sources`. `provider` se admite como alias de `source`. `featured` incluye hasta 200 álbumes y artistas; para enumerar bibliotecas grandes se usan las rutas paginadas.
 
@@ -174,3 +174,5 @@ El servidor mantiene la presencia solo en memoria y separada por cuenta. Los con
 Estados principales: `400` petición inválida, `401` sesión inválida, `403` permisos, `404` recurso inexistente, `409` conflicto de orden o revisión, `413` límite excedido, `416` rango inválido, `422` archivo o formato no procesable, `429` límite de acceso y `503` cola de conversiones llena.
 
 Los módulos no disponibles producen `503 SOURCE_UNAVAILABLE`; las respuestas de módulo que incumplen el contrato producen `502 SOURCE_INVALID_RESPONSE`. El core no reenvía errores privados ni credenciales del módulo. Consulta [MODULES.md](MODULES.md) para configurar fuentes y desarrollar módulos.
+
+La configuración permite activar o desactivar independientemente `library.enabled` (por defecto `true`) y `external.enabled` (por defecto `false`). Se aplica al reiniciar. Desactivar una parte conserva los datos del usuario pero retira sus rutas de catálogo y audio; los ids de fuentes inactivas devuelven `404 SOURCE_NOT_FOUND`. Con ambas desactivadas, el core mantiene cuentas y biblioteca personal, devuelve listas de catálogo vacías y publica `defaultSource: null`. Los contratos y `/health` siguen disponibles.

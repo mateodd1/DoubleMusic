@@ -149,10 +149,71 @@ test('contrato de módulos: ejemplo HTTP y núcleo independientes de plataformas
     const tokenPath = path.join(f.directory, 'module-token'); await fs.writeFile(tokenPath, f.moduleToken, { mode: 0o600 });
     const configPath = path.join(f.directory, 'sources.json');
     const entry = { id: 'personal', type: 'http', name: 'Privado', origin: f.origin, tokenFile: 'module-token' };
-    await fs.writeFile(configPath, JSON.stringify({ version: 1, defaultSource: 'personal', sources: [entry] }));
+    const settings = { version: 1, library: { enabled: false }, external: { enabled: true } };
+    await fs.writeFile(configPath, JSON.stringify({ ...settings, defaultSource: 'personal', sources: [entry] }));
     const loaded = await loadSources(configPath); assert.equal(loaded.catalog, null); assert.equal(loaded.sources.defaultSource, 'personal'); assert.equal((await loaded.sources.track('personal:track-1')).id, 'personal:track-1');
     for (const entries of [[entry, entry], [{ ...entry, id: 'local' }], [{ ...entry, id: 'all' }], [{ ...entry, origin: f.origin + '/path' }], [{ ...entry, type: 'bundled-platform' }]]) {
-      await fs.writeFile(configPath, JSON.stringify({ version: 1, sources: entries })); await assert.rejects(loadSources(configPath));
+      await fs.writeFile(configPath, JSON.stringify({ ...settings, sources: entries })); await assert.rejects(loadSources(configPath));
     }
+  });
+  const moduleEntry = { id: 'personal', type: 'http', origin: f.origin, tokenFile: 'module-token' };
+  const loadSettings = async settings => {
+    const config = { version: 1, ...settings, library: { musicDir: f.catalog.root, ...settings.library } };
+    const configPath = path.join(f.directory, 'switches.json');
+    await fs.writeFile(configPath, JSON.stringify(config));
+    const previous = process.env.DATA_DIR; process.env.DATA_DIR = path.join(f.directory, 'switches-data');
+    try { return await loadSources(configPath); }
+    finally { if (previous === undefined) delete process.env.DATA_DIR; else process.env.DATA_DIR = previous; }
+  };
+  await t.test('biblioteca activada y módulos desactivados por defecto, sin leer sus secretos', async () => {
+    const before = f.requests.length;
+    const loaded = await loadSettings({ defaultSource: 'personal', sources: [{ ...moduleEntry, origin: 'invalid-origin', tokenFile: 'does-not-exist' }] });
+    assert.ok(loaded.catalog); assert.deepEqual(loaded.sources.info().map(s => s.id), ['local']);
+    assert.deepEqual(loaded.sources.configuration, { library: { enabled: true }, external: { enabled: false } });
+    assert.equal(loaded.sources.defaultSource, 'local', 'Al desactivar la fuente predeterminada se recupera la biblioteca local');
+    await loaded.sources.health(); assert.equal(f.requests.length, before);
+    await assert.rejects(async () => loaded.sources.track('personal:track-1'), { code: 'SOURCE_NOT_FOUND' });
+  });
+  await t.test('se pueden activar biblioteca y módulos simultáneamente', async () => {
+    const loaded = await loadSettings({ library: { enabled: true }, external: { enabled: true }, sources: [moduleEntry] });
+    assert.ok(loaded.catalog); assert.equal(loaded.sources.defaultSource, 'local');
+    assert.deepEqual(loaded.sources.info().map(s => s.id), ['local', 'personal']);
+    assert.equal((await loaded.sources.track('personal:track-1')).provider, 'personal');
+    assert.deepEqual(loaded.sources.configuration, { library: { enabled: true }, external: { enabled: true } });
+  });
+  await t.test('desactivar la biblioteca evita abrir la carpeta de música', async () => {
+    const loaded = await loadSettings({ library: { enabled: false, musicDir: '/nonexistent-library' }, external: { enabled: true }, sources: [moduleEntry] });
+    assert.equal(loaded.catalog, null); assert.equal(loaded.sources.defaultSource, 'personal');
+    assert.deepEqual(loaded.sources.info().map(s => s.id), ['personal']);
+    assert.equal((await loaded.sources.track('personal:track-1')).id, 'personal:track-1');
+  });
+  await t.test('un módulo individual se puede desactivar aunque las conexiones estén permitidas', async () => {
+    const off = { ...moduleEntry, id: 'disabled', enabled: false, tokenFile: 'does-not-exist', origin: 'invalid-origin' };
+    const loaded = await loadSettings({ library: { enabled: false }, external: { enabled: true }, sources: [moduleEntry, off] });
+    assert.deepEqual(loaded.sources.info().map(s => s.id), ['personal']);
+    await assert.rejects(async () => loaded.sources.track('disabled:track-1'), { code: 'SOURCE_NOT_FOUND' });
+  });
+  await t.test('ambas partes desactivadas mantienen cuentas y API con catálogo vacío', async () => {
+    const before = f.requests.length;
+    const loaded = await loadSettings({ library: { enabled: false, musicDir: '/nonexistent-library' }, external: { enabled: false }, defaultSource: 'personal', sources: [{ ...moduleEntry, tokenFile: 'does-not-exist', origin: 'invalid-origin' }] });
+    assert.equal(loaded.catalog, null); assert.equal(loaded.sources.defaultSource, null); assert.deepEqual(await loaded.sources.health(), {});
+    const store = new Store(':memory:'); store.createUser('admin', await hashPassword('switches-test-password'), 'admin');
+    const server = createApp({ store, catalog: loaded.catalog, sources: loaded.sources, logger: { error() {} } });
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    t.after(async () => { server.connect.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); store.close(); });
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const login = await fetch(base + '/api/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: 'switches-test-password', transport: 'bearer' }) });
+    assert.equal(login.status, 200); const headers = { Authorization: 'Bearer ' + (await login.json()).session.token };
+    for (const route of ['/api/v1/catalog/tracks', '/api/v1/catalog/albums']) { const res = await fetch(base + route, { headers }); assert.equal(res.status, 200); assert.equal((await res.json()).total, 0); }
+    for (const route of ['/api/v1/catalog/search?q=test', '/api/v1/catalog/featured']) { const res = await fetch(base + route, { headers }); assert.equal(res.status, 200); assert.deepEqual((await res.json()).sources, []); }
+    assert.equal((await fetch(base + '/api/v1/library', { headers })).status, 200);
+    assert.equal((await fetch(base + '/api/v1/admin/scan', { headers })).status, 404);
+    for (const route of ['/api/v1/audio/personal%3Atrack-1', '/api/v1/catalog/artwork/personal%3Acover-1', '/api/v1/audio/local%3At_test']) assert.equal((await fetch(base + route, { headers })).status, 404);
+    const info = await (await fetch(base + '/api/v1')).json(); assert.equal(info.defaultSource, null); assert.deepEqual(info.providers, []);
+    assert.deepEqual(info.configuration, { library: { enabled: false }, external: { enabled: false } });
+    assert.equal(f.requests.length, before);
+  });
+  await t.test('los interruptores de configuración exigen booleanos reales', async () => {
+    for (const settings of [{ library: { enabled: 'false' } }, { external: { enabled: 1 } }, { modules: { enabled: true } }, { sources: [{ ...moduleEntry, enabled: 'false' }] }]) await assert.rejects(loadSettings(settings));
   });
 });

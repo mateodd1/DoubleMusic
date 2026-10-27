@@ -48,7 +48,7 @@ function createApp({ store, catalog, media, sources = new SourceRegistry([new Lo
       const method = expected => { if (!expected.includes(req.method)) { res.setHeader('Allow', expected.join(', ')); throw new ApiError(405, 'METHOD_NOT_ALLOWED'); } };
       if (path === '/health') { method(['GET']); store.get('SELECT 1'); return send({ status: 'ok', apiVersion: 1, catalog: catalog?.lastScan || null }); }
       if (path === PREFIX || path === `${PREFIX}/`) {
-        method(['GET']); return send({ name: 'DoubleMusic', version, apiVersion: 1, providers: sources.info().map(source => source.id), sources: sources.info(), defaultSource: sources.defaultSource, authentication: ['bearer', 'cookie'], limits: LIMITS,
+        method(['GET']); return send({ name: 'DoubleMusic', version, apiVersion: 1, providers: sources.info().map(source => source.id), sources: sources.info(), defaultSource: sources.defaultSource, configuration: sources.configuration, authentication: ['bearer', 'cookie'], limits: LIMITS,
           capabilities: { modularSources: true, moduleApiVersion: 1, localFiles: sources.sources.has('local'), serverSideAudio: true, byteRanges: true, connect: true, lyrics: true, audioFormats: ['original', 'mp4', 'mp3'] },
           documentation: { client: publicUrl + `${PREFIX}/openapi.json`, modules: publicUrl + `${PREFIX}/modules/openapi.json` } });
       }
@@ -184,7 +184,7 @@ function createApp({ store, catalog, media, sources = new SourceRegistry([new Lo
         const artist = (await sources.artist(id)).artist;
         return send(store.follow(userId, id, { name: artist.name, imageUrl: artist.imageUrl }));
       }
-      if (path === `${PREFIX}/sources` || path === `${PREFIX}/providers`) { method(['GET']); return send({ defaultSource: sources.defaultSource, items: await sources.health() }); }
+      if (path === `${PREFIX}/sources` || path === `${PREFIX}/providers`) { method(['GET']); return send({ defaultSource: sources.defaultSource, configuration: sources.configuration, items: await sources.health() }); }
       if (path === `${PREFIX}/admin/scan`) {
         if (!catalog) throw new ApiError(404, 'LOCAL_SOURCE_DISABLED', 'No hay una biblioteca local configurada.');
         if (user.role !== 'admin') throw new ApiError(403, 'ADMIN_REQUIRED');

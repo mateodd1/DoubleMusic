@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "DoubleMusic Client API",
-    "version": "1.1.1",
-    "description": "API de biblioteca musical local para clientes móviles. DoubleMusic gestiona archivos locales, cuentas y bibliotecas personales. Los módulos HTTP son extensiones opcionales. La navegación, búsqueda y portada utilizan la fuente predeterminada, normalmente local; source=ID consulta una extensión y source=all combina fuentes expresamente en búsqueda y portada."
+    "version": "1.2.0",
+    "description": "API de biblioteca musical local para clientes móviles. library.enabled activa la biblioteca local (true por defecto); external.enabled permite conexiones externas opcionales (false por defecto). Se configuran en SOURCES_FILE y se aplican al reiniciar. La navegación utiliza la fuente predeterminada, normalmente local. Las cuentas se conservan al desactivar las fuentes. Con ambas partes desactivadas el catálogo queda vacío y defaultSource es null."
   },
   "servers": [
     {
@@ -4406,13 +4406,17 @@
         "type": "object",
         "properties": {
           "defaultSource": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "items": {
             "type": "object",
             "additionalProperties": {
               "$ref": "#/components/schemas/Source"
             }
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/Configuration"
           }
         }
       },
@@ -4509,7 +4513,8 @@
             }
           },
           "defaultSource": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "capabilities": {
             "type": "object"
@@ -4527,6 +4532,9 @@
                 "type": "string"
               }
             }
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/Configuration"
           }
         }
       },
@@ -4589,6 +4597,32 @@
           "error": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "FeatureSwitch": {
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Configuration": {
+        "type": "object",
+        "required": [
+          "library",
+          "external"
+        ],
+        "properties": {
+          "library": {
+            "$ref": "#/components/schemas/FeatureSwitch"
+          },
+          "external": {
+            "$ref": "#/components/schemas/FeatureSwitch"
           }
         }
       }

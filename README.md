@@ -1,10 +1,10 @@
 # DoubleMusic
 
-Servidor para organizar y reproducir tu biblioteca de archivos de música desde tus clientes móviles. DoubleMusic indexa una carpeta local, lee sus metadatos y sirve el audio desde tu servidor. Puedes ampliarlo con módulos opcionales conectados mediante una API HTTP documentada.
+Servidor para organizar y reproducir tu biblioteca de archivos de música desde tus clientes móviles. DoubleMusic indexa una carpeta local, lee sus metadatos y sirve el audio desde tu servidor. Puedes habilitar conexiones externas opcionales mediante una API HTTP documentada.
 
 Incluye usuarios con sesiones revocables, favoritos, playlists personales, álbumes guardados, artistas seguidos, playlists M3U, portadas y letras locales, streaming con saltos por rangos de bytes y control entre dispositivos mediante Connect.
 
-La biblioteca local es el centro del servidor: el catálogo, la portada y la búsqueda utilizan tus archivos por defecto y funcionan sin acceso a Internet una vez instalado. Los módulos son extensiones optativas creadas por el usuario y se consultan expresamente por API; no se incluye ninguna integración con plataformas. El núcleo utiliza Node.js 22.13 o posterior, SQLite integrado, FFmpeg/FFprobe y `ws` para WebSocket.
+La biblioteca local es el centro del servidor: el catálogo, la portada y la búsqueda utilizan tus archivos por defecto y funcionan sin acceso a Internet una vez instalado. Las conexiones externas son optativas, están desactivadas por defecto y se consultan expresamente por API. El proyecto está orientado a música propia o autorizada y a servicios utilizados con los permisos correspondientes; consulta [el alcance de uso](docs/USAGE.md). El núcleo utiliza Node.js 22.13 o posterior, SQLite integrado, FFmpeg/FFprobe y `ws` para WebSocket.
 
 ## Inicio con Docker
 
@@ -54,7 +54,41 @@ En fMP4, la calidad `original` conserva AAC, ALAC, FLAC y Opus. Los demás códe
 
 Este servidor implementa el contrato v1 de DuoMusic; el cliente debe permitir configurar el origen del servicio y conservar ids completos `fuente:id`; la biblioteca local utiliza `local:`. La documentación de integración está en [docs/API.md](docs/API.md). Las pruebas HTTP validan el contrato y los archivos de audio; no sustituyen la comprobación en cada versión de las apps móviles.
 
-## Ampliar la biblioteca con módulos por API
+## Activar o desactivar funciones
+
+En el JSON indicado por `SOURCES_FILE`:
+
+```json
+{
+  "version": 1,
+  "library": { "enabled": true },
+  "external": { "enabled": false }
+}
+```
+
+| `library.enabled` | `external.enabled` | Resultado |
+| --- | --- | --- |
+| `true` | `false` | Biblioteca local; configuración predeterminada. |
+| `true` | `true` | Biblioteca local con conexiones externas opcionales. |
+| `false` | `true` | Solo las conexiones externas que hayas configurado. |
+| `false` | `false` | Cuentas y API disponibles con catálogo vacío. |
+
+La configuración se aplica al reiniciar el servicio. Desactivar la biblioteca evita el escaneo; desactivar las conexiones externas impide cargar sus credenciales o consultarlas desde DoubleMusic. Los archivos, las cuentas y las bibliotecas personales se conservan. `GET /api/v1/sources` informa de la configuración efectiva y de las fuentes activas.
+
+Para montar tu configuración con Compose, crea `compose.config.yml`:
+
+```yaml
+services:
+  doublemusic:
+    environment:
+      SOURCES_FILE: /config/settings.json
+    volumes:
+      - ./settings.json:/config/settings.json:ro
+```
+
+Guarda el JSON en `settings.json` y aplica los cambios con `docker compose -f docker-compose.yml -f compose.config.yml up -d --force-recreate doublemusic`. Para una conexión externa, añade su definición en `sources` y habilita `external.enabled`; cada entrada admite también `enabled: false` para desactivarla individualmente. La [guía de extensiones](docs/MODULES.md) detalla ese contrato y la configuración.
+
+## Conexiones externas por API
 
 - [API para clientes móviles](docs/API.md) y [contrato OpenAPI](docs/openapi.json).
 - [Guía para crear módulos](docs/MODULES.md) y [contrato OpenAPI de módulos](docs/module-openapi.json).
@@ -62,7 +96,7 @@ Este servidor implementa el contrato v1 de DuoMusic; el cliente debe permitir co
 
 Conectar un módulo mantiene la navegación habitual en tu biblioteca local. Para consultar una extensión se usa `source=ID`; `source=all` permite buscar o mostrar contenido de todas las fuentes. Los módulos no copian ni descargan automáticamente su catálogo a la carpeta local.
 
-Cada módulo implementa `/module/v1`: catálogo, búsqueda, pistas, audio, imágenes y letras. DoubleMusic mantiene las cuentas, permisos, favoritos y playlists; los clientes siguen usando `/api/v1`. El operador conecta módulos mediante `SOURCES_FILE`. No hay que modificar el núcleo ni añadir dependencias de una plataforma al servidor.
+Cada módulo implementa `/module/v1`: catálogo, búsqueda, pistas, audio, imágenes y letras. DoubleMusic mantiene las cuentas, permisos, favoritos y playlists; los clientes siguen usando `/api/v1`. El operador configura las conexiones mediante `SOURCES_FILE` y las habilita con `external.enabled`. No hay que modificar el núcleo ni añadir dependencias de una plataforma al servidor.
 
 Los contratos también se sirven en `/api/v1/openapi.json` y `/api/v1/modules/openapi.json`. El ejemplo y su configuración optativa están explicados en [MODULES.md](docs/MODULES.md).
 

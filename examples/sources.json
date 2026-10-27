@@ -1,5 +1,7 @@
 {
   "version": 1,
+  "library": { "enabled": true },
+  "external": { "enabled": true },
   "defaultSource": "local",
   "sources": [
     { "id": "local", "type": "local" },

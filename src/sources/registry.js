@@ -3,17 +3,18 @@ const { reference } = require('../models');
 const { ApiError, invalid } = require('../errors');
 
 class SourceRegistry {
-  constructor(sources, defaultSource = sources.some(source => source.id === 'local') ? 'local' : sources[0]?.id) {
-    if (!sources.length || sources.length > 16 || new Set(sources.map(s => s.id)).size !== sources.length) throw new Error('Configura entre 1 y 16 fuentes con ids únicos.');
+  constructor(sources, defaultSource = sources.some(source => source.id === 'local') ? 'local' : sources[0]?.id, configuration) {
+    if (sources.length > 16 || new Set(sources.map(s => s.id)).size !== sources.length) throw new Error('Configura hasta 16 fuentes activas con ids únicos.');
     if (sources.some(source => source.id === 'all')) throw new Error('El id all se reserva para consultas agregadas.');
     this.sources = new Map(sources.map(source => [source.id, source]));
-    if (!this.sources.has(defaultSource)) throw new Error('La fuente predeterminada no está configurada.');
-    this.defaultSource = defaultSource;
+    if (sources.length && !this.sources.has(defaultSource)) throw new Error('La fuente predeterminada no está configurada.');
+    this.defaultSource = sources.length ? defaultSource : null;
+    this.configuration = configuration || { library: { enabled: this.sources.has('local') }, external: { enabled: sources.some(source => source.type === 'http') } };
   }
   info() { return [...this.sources.values()].map(({ id, name, type }) => ({ id, name, type })); }
   source(id) { const source = this.sources.get(id); if (!source) throw new ApiError(404, 'SOURCE_NOT_FOUND', 'La fuente no está configurada.'); return source; }
   resource(id) { return this.source(reference(id).provider); }
-  selection(id) { return id === 'all' ? [...this.sources.values()] : [this.source(id || this.defaultSource)]; }
+  selection(id) { return id === 'all' ? [...this.sources.values()] : !id && !this.defaultSource ? [] : [this.source(id || this.defaultSource)]; }
   async health() {
     return Object.fromEntries(await Promise.all([...this.sources.values()].map(async source => {
       try { return [source.id, { ...await source.health(), id: source.id, name: source.name, type: source.type }]; }
@@ -22,6 +23,7 @@ class SourceRegistry {
   }
   list(kind, paging, sourceId) {
     if (sourceId === 'all') throw invalid('Las listas paginadas requieren una fuente concreta; usa /sources para enumerarlas.');
+    if (!sourceId && !this.defaultSource) return { items: [], total: 0, ...paging };
     return this.source(sourceId || this.defaultSource).list(kind, paging);
   }
   async search(query, sourceId) {
