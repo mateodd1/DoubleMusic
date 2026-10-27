@@ -1,0 +1,14 @@
+{
+  "name": "doublemusic",
+  "version": "1.0.0",
+  "description": "Servidor de biblioteca musical local para clientes móviles",
+  "private": true,
+  "type": "commonjs",
+  "engines": { "node": ">=22.13.0" },
+  "scripts": {
+    "start": "node server.js",
+    "user": "node cli.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": { "ws": "8.22.0" }
+}
