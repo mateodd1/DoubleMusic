@@ -1,6 +1,6 @@
 {
   "name": "doublemusic",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Local music library server with optional external API connections",
   "private": true,
   "type": "commonjs",

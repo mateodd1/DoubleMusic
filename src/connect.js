@@ -4,7 +4,7 @@ const { randomUUID } = require('node:crypto');
 const { hashToken } = require('./auth');
 
 const PATH = '/api/v1/connect';
-const ACTIONS = new Set(['play', 'pause', 'next', 'previous', 'seek', 'transfer', 'playQueue']);
+const ACTIONS = new Set(['play', 'pause', 'next', 'previous', 'seek', 'transfer', 'playQueue', 'queueEdit']);
 const seconds = n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 86400;
 function track(t, publicUrl = '') {
   if (!t || typeof t.id !== 'string' || !/^[a-z][a-z0-9-]{0,31}:[A-Za-z0-9_-]{1,120}$/.test(t.id)) throw Error('INVALID_TRACK');
@@ -16,6 +16,22 @@ function track(t, publicUrl = '') {
     if (/^\/api\/v1\/catalog\/artwork\/[a-z][a-z0-9-]{0,31}%3A[A-Za-z0-9_-]{1,120}$/.test(image)) coverUrl = publicUrl + image;
   }
   return { id: t.id, title: text(t.title), artist: text(t.artist), album: text(t.album), artistId: text(t.artistId, 160), albumId: text(t.albumId, 160), coverUrl, duration: seconds(t.duration) ? t.duration : 0 };
+}
+
+function queueEdit(m, n, current, localTrack) {
+  const edit = { operation: m.operation, queueRevision: m.queueRevision };
+  const index = key => { if (!Number.isInteger(m[key]) || m[key] < 0 || m[key] >= n) throw Error(); return m[key]; };
+  switch (m.operation) {
+    case 'append': case 'next': if (n >= 1000) throw Error(); edit.track = localTrack(m.track); break;
+    case 'remove': case 'jump': edit.from = index('from'); if (m.operation === 'remove' && edit.from <= current) throw Error(); break;
+    case 'move': edit.from = index('from'); edit.to = index('to'); if (edit.from <= current || edit.to <= current) throw Error(); break;
+    case 'clear': break;
+    case 'shuffle': case 'mute': if (typeof m.value !== 'boolean') throw Error(); edit.value = m.value; break;
+    case 'repeat': if (!['off','all','one'].includes(m.value)) throw Error(); edit.value = m.value; break;
+    case 'volume': if (typeof m.value !== 'number' || !Number.isFinite(m.value) || m.value < 0 || m.value > 1) throw Error(); edit.value = m.value; break;
+    default: throw Error();
+  }
+  return edit;
 }
 
 /** Ephemeral account-scoped presence. A restart never restores phantom devices. */
@@ -98,26 +114,47 @@ function attachConnect(server, auth, { now = Date.now, interval = 5000, staleMs 
               // can retain their chosen output across a socket replacement.
               p.instanceId = hashToken(JSON.stringify([p.userId, m.deviceKey]));
               if (m.capabilities !== undefined && (!Array.isArray(m.capabilities) || m.capabilities.length > 16 || m.capabilities.some(c => typeof c !== 'string' || c.length > 64))) throw Error('INVALID_CAPABILITIES');
-              p.capabilities = m.capabilities?.includes('playQueue') ? ['playQueue'] : [];
+              p.capabilities = ['playQueue', 'queueControl'].filter(c => m.capabilities?.includes(c));
               p.name = typeof m.name === 'string' ? m.name.slice(0, 64).trim() : '';
               if (!p.name) p.name = m.platform === 'ios' ? 'iPhone / iPad' : 'Android';
             }
             p.role = m.role;
             send(p, { type: 'ready', version: 1, deviceId: p.id, serverTime: now() });
-            if (p.role === 'controller') send(p, { type: 'devices', items: devices(p.userId), serverTime: now() });
+            if (p.role === 'controller') {
+              send(p, { type: 'devices', items: devices(p.userId), serverTime: now() });
+              for (const peer of peers) if (peer.userId === p.userId && live(peer) && peer.queue) send(p, { type: 'queue', deviceId: peer.id, revision: peer.queue.revision, queue: peer.queue.queue });
+            }
             return;
           }
           if (m.type === 'state' && p.role === 'player') {
-            if (raw.length > 16384) throw Error('INVALID_STATE');
+            if (raw.length > (p.capabilities.includes('queueControl') ? 2 * 1024 * 1024 - 1024 : 16384)) throw Error('INVALID_STATE');
             const s = m.state;
-            if (s === null) { p.state = null; p.visible = false; broadcast(p.userId); return; }
+            if (s === null) { p.state = null; p.queue = null; p.queueBytes = 0; p.visible = false; broadcast(p.userId); return; }
             if (!s || !seconds(s.position) || !seconds(s.duration) || typeof s.playing !== 'boolean') throw Error('INVALID_STATE');
+            let changed = false, extra = {};
+            if (p.capabilities.includes('queueControl') && s.queueRevision != null) {
+              if (typeof s.queueRevision !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(s.queueRevision)) throw Error('INVALID_QUEUE');
+              if (s.queue !== undefined) {
+                if (!Array.isArray(s.queue) || s.queue.length < 1 || s.queue.length > 1000) throw Error('INVALID_QUEUE');
+                const q = s.queue.map(localTrack);
+                if (p.queue?.revision === s.queueRevision && JSON.stringify(p.queue.queue) !== JSON.stringify(q)) throw Error('INVALID_QUEUE');
+                changed = p.queue?.revision !== s.queueRevision;
+                const next = { queue: q, revision: s.queueRevision }, bytes = Buffer.byteLength(JSON.stringify(next));
+                if ([...peers].reduce((n, peer) => n + (peer.queueBytes || 0), 0) - (p.queueBytes || 0) + bytes > 16 * 1024 * 1024) throw Error('QUEUE_STORAGE_LIMIT');
+                p.queue = next; p.queueBytes = bytes;
+              }
+              if (!p.queue || p.queue.revision !== s.queueRevision || !Number.isInteger(s.queueIndex) || s.queueIndex < 0 || p.queue.queue[s.queueIndex]?.id !== s.track.id ||
+                  typeof s.shuffle !== 'boolean' || !['off','all','one'].includes(s.repeat) || typeof s.volume !== 'number' || !Number.isFinite(s.volume) || s.volume < 0 || s.volume > 1 || typeof s.muted !== 'boolean') throw Error('INVALID_QUEUE');
+              extra = { queueRevision: s.queueRevision, queueIndex: s.queueIndex, shuffle: s.shuffle, repeat: s.repeat, volume: s.volume, muted: s.muted };
+            } else { p.queue = null; p.queueBytes = 0; }
             p.state = { track: localTrack(s.track), position: Math.min(s.position, s.duration || s.position), duration: s.duration,
-              playing: s.playing, buffering: s.buffering === true, canNext: s.canNext === true, updatedAt: now(), sequence: p.sequence = (p.sequence || 0) + 1 };
-            p.updatedAt = now(); p.visible = true; broadcast(p.userId); return;
+              playing: s.playing, buffering: s.buffering === true, canNext: s.canNext === true, updatedAt: now(), sequence: p.sequence = (p.sequence || 0) + 1, ...extra };
+            p.updatedAt = now(); p.visible = true; broadcast(p.userId);
+            if (changed) for (const c of peers) if (c.userId === p.userId && c.role === 'controller' && valid(c)) send(c, { type: 'queue', deviceId: p.id, revision: p.queue.revision, queue: p.queue.queue });
+            return;
           }
           if (m.type === 'command' && p.role === 'controller') {
-            if (typeof m.id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(m.id) || !ACTIONS.has(m.action) || (m.action !== 'playQueue' && raw.length > 2048)) throw Error('INVALID_COMMAND');
+            if (typeof m.id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(m.id) || !ACTIONS.has(m.action) || (!['playQueue','queueEdit'].includes(m.action) && raw.length > 2048)) throw Error('INVALID_COMMAND');
             const fail = error => send(p, { type: 'result', id: m.id, ok: false, error });
             if (p.seen.has(m.id)) return fail('DUPLICATE_COMMAND');
             p.seen.add(m.id); if (p.seen.size > 128) p.seen.delete(p.seen.values().next().value);
@@ -125,7 +162,12 @@ function attachConnect(server, auth, { now = Date.now, interval = 5000, staleMs 
             const target = [...peers].find(x => x.id === m.deviceId && x.userId === p.userId && live(x));
             if (!target) return fail('DEVICE_OFFLINE');
             if (m.action !== 'playQueue' && m.trackId !== target.state.track.id) return fail('TRACK_CHANGED');
-            let queue;
+            let queue, edit;
+            if (m.action === 'queueEdit') {
+              if (!target.capabilities.includes('queueControl') || !target.queue) return fail('UNSUPPORTED_COMMAND');
+              if (m.queueRevision !== target.state.queueRevision) return fail('QUEUE_CHANGED');
+              try { edit = queueEdit(m, target.queue.queue.length, target.state.queueIndex, localTrack); } catch { return fail('INVALID_QUEUE'); }
+            }
             if (m.action === 'playQueue') {
               if (!target.capabilities.includes('playQueue')) return fail('UNSUPPORTED_COMMAND');
               try {
@@ -134,10 +176,10 @@ function attachConnect(server, auth, { now = Date.now, interval = 5000, staleMs 
               } catch { return fail('INVALID_QUEUE'); }
             }
             if (m.action === 'seek' && (!seconds(m.position) || m.position > target.state.duration)) return fail('INVALID_POSITION');
-            if ([...pending.values()].some(item => item.target === target && (item.action === 'transfer' || m.action === 'transfer'))) return fail('DEVICE_BUSY');
+            if ([...pending.values()].some(item => item.target === target && (item.action === 'transfer' || m.action === 'transfer' || item.action === 'queueEdit' || m.action === 'queueEdit'))) return fail('DEVICE_BUSY');
             const id = randomUUID(), expiresAt = now() + 5000;
-            pending.set(id, { controller: p, clientId: m.id, target, action: m.action, trackId: queue ? queue.queue[queue.index].id : m.trackId, expiresAt });
-            send(target, { type: 'command', id, action: m.action, ...(queue || { trackId: m.trackId }), ...(m.action === 'seek' ? { position: m.position } : {}), expiresAt });
+            pending.set(id, { controller: p, clientId: m.id, target, action: m.action, trackId: queue ? queue.queue[queue.index].id : m.trackId, sequence: target.sequence, expiresAt });
+            send(target, { type: 'command', id, action: m.action, ...(queue || { trackId: m.trackId }), ...edit, ...(m.action === 'seek' ? { position: m.position } : {}), expiresAt });
             return;
           }
           if (m.type === 'ack' && p.role === 'player') {
@@ -146,6 +188,7 @@ function attachConnect(server, auth, { now = Date.now, interval = 5000, staleMs 
             if (now() >= item.expiresAt) return finish(m.id, { ok: false, error: 'DEVICE_TIMEOUT' });
             if (m.ok !== true) return finish(m.id, { ok: false, error: 'COMMAND_FAILED' });
             if (item.action === 'playQueue' && p.state?.track.id !== item.trackId) return finish(m.id, { ok: false, error: 'COMMAND_FAILED' });
+            if (item.action === 'queueEdit' && p.sequence <= item.sequence) return finish(m.id, { ok: false, error: 'COMMAND_FAILED' });
             let snapshot;
             if (item.action === 'transfer') {
               const s = m.snapshot;
@@ -156,7 +199,7 @@ function attachConnect(server, auth, { now = Date.now, interval = 5000, staleMs 
               // A handoff is acknowledged only once the source is paused.
               if (!p.state || p.state.playing || p.state.track.id !== item.trackId) throw Error('SOURCE_NOT_PAUSED');
             }
-            finish(m.id, { ok: true, ...(snapshot ? { snapshot } : {}), ...(item.action === 'seek' ? { device: devices(p.userId).find(d => d.id === p.id), serverTime: now() } : {}) }); return;
+            finish(m.id, { ok: true, ...(snapshot ? { snapshot } : {}), ...(['seek', 'queueEdit', 'playQueue'].includes(item.action) ? { device: devices(p.userId).find(d => d.id === p.id), serverTime: now() } : {}) }); return;
           }
           throw Error('INVALID_MESSAGE');
         } catch { ws.close(1008, 'Invalid connect message'); }

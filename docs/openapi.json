@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "DoubleMusic Client API",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "Local music library API for mobile clients. library.enabled enables the local library (true by default); external.enabled allows optional external connections (false by default). Configure them in SOURCES_FILE and restart to apply changes. Browsing uses the default source, normally local. Accounts are preserved when sources are disabled. With both features disabled, the catalog is empty and defaultSource is null."
   },
   "servers": [
@@ -2574,6 +2574,9 @@
               }
             }
           },
+          "304": {
+            "description": "Library unchanged"
+          },
           "default": {
             "description": "Error",
             "content": {
@@ -2583,9 +2586,6 @@
                 }
               }
             }
-          },
-          "304": {
-            "description": "Library unchanged"
           }
         },
         "parameters": [
@@ -3714,7 +3714,7 @@
     },
     "/api/v1/connect": {
       "get": {
-        "summary": "Upgrade to Connect WebSocket; protocol documented in API.md",
+        "summary": "Connect v1 playback, synchronized queues, and incremental remote controls",
         "responses": {
           "101": {
             "description": "OK"
@@ -3727,6 +3727,47 @@
                   "$ref": "#/components/schemas/Error"
                 }
               }
+            }
+          }
+        },
+        "description": "Authenticated WebSocket with no URL query. Native clients use Bearer; browsers use the session cookie and an allowed Origin. See docs/CONNECT.md for the complete message contract and client implementation requirements. queueControl is optional and negotiated per player; existing basic controls remain compatible.",
+        "externalDocs": {
+          "description": "Complete Connect protocol",
+          "url": "https://github.com/mateodd1/DoubleMusic/blob/main/docs/CONNECT.md"
+        },
+        "x-websocket-messages": {
+          "client": {
+            "hello": {
+              "$ref": "#/components/schemas/ConnectHello"
+            },
+            "state": {
+              "$ref": "#/components/schemas/ConnectStateMessage"
+            },
+            "command": {
+              "$ref": "#/components/schemas/ConnectCommand"
+            },
+            "ack": {
+              "$ref": "#/components/schemas/ConnectAck"
+            }
+          },
+          "server": {
+            "devices": {
+              "$ref": "#/components/schemas/ConnectDevicesEvent"
+            },
+            "queue": {
+              "$ref": "#/components/schemas/ConnectQueueEvent"
+            },
+            "command": {
+              "$ref": "#/components/schemas/ConnectCommand"
+            },
+            "result": {
+              "$ref": "#/components/schemas/ConnectResult"
+            },
+            "ready": {
+              "$ref": "#/components/schemas/ConnectReady"
+            },
+            "heartbeat": {
+              "$ref": "#/components/schemas/ConnectHeartbeat"
             }
           }
         }
@@ -4639,6 +4680,600 @@
             "$ref": "#/components/schemas/FeatureSwitch"
           }
         }
+      },
+      "ConnectTrack": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "artist": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "album": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "artistId": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "albumId": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "coverUrl": {
+            "type": "string",
+            "description": "Only artwork on this DoubleMusic catalog origin is relayed."
+          },
+          "duration": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 86400
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "description": "Sanitized catalog metadata; audio URLs, tokens and arbitrary fields are discarded."
+      },
+      "ConnectHello": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "hello"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "player",
+              "controller"
+            ]
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ]
+          },
+          "deviceKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "capabilities": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "string"
+            },
+            "description": "Advertise playQueue and/or queueControl only when implemented; unknown capability names are ignored."
+          }
+        },
+        "required": [
+          "type",
+          "version",
+          "role"
+        ],
+        "description": "Player hello additionally requires platform and deviceKey. Send within five seconds of connection."
+      },
+      "ConnectPlayerState": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "$ref": "#/components/schemas/ConnectTrack"
+          },
+          "position": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 86400
+          },
+          "duration": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 86400
+          },
+          "playing": {
+            "type": "boolean"
+          },
+          "buffering": {
+            "type": "boolean"
+          },
+          "canNext": {
+            "type": "boolean"
+          },
+          "shuffle": {
+            "type": "boolean"
+          },
+          "muted": {
+            "type": "boolean"
+          },
+          "queue": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnectTrack"
+            },
+            "minItems": 1,
+            "maxItems": 1000
+          },
+          "queueRevision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "queueIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 999
+          },
+          "repeat": {
+            "type": "string",
+            "enum": [
+              "off",
+              "all",
+              "one"
+            ]
+          },
+          "volume": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "updatedAt": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "track",
+          "position",
+          "duration",
+          "playing"
+        ],
+        "description": "queueControl state with queueRevision additionally requires queueIndex, shuffle, repeat, volume and muted. Send the full queue on connection/revision changes, omit it on progress. The indexed entry must match track.id. Server adds updatedAt and sequence to relayed state."
+      },
+      "ConnectStateMessage": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "state"
+            ]
+          },
+          "state": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConnectPlayerState"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "type",
+          "state"
+        ],
+        "description": "Null state hides the device and discards its cached queue."
+      },
+      "ConnectDevice": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "instanceId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "state": {
+            "$ref": "#/components/schemas/ConnectPlayerState"
+          }
+        },
+        "required": [
+          "id",
+          "state"
+        ],
+        "description": "Account-local live device; relayed state omits the full queue array."
+      },
+      "ConnectDevicesEvent": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "devices"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnectDevice"
+            }
+          },
+          "serverTime": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "type",
+          "items",
+          "serverTime"
+        ]
+      },
+      "ConnectQueueEvent": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "queue"
+            ]
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "queue": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnectTrack"
+            },
+            "minItems": 1,
+            "maxItems": 1000
+          }
+        },
+        "required": [
+          "type",
+          "deviceId",
+          "revision",
+          "queue"
+        ],
+        "description": "Sent only when the revision changes or a controller connects. Preserve duplicates. Use only with a live device whose queueRevision matches."
+      },
+      "ConnectCommand": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "command"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "play",
+              "pause",
+              "next",
+              "previous",
+              "seek",
+              "transfer",
+              "playQueue",
+              "queueEdit"
+            ]
+          },
+          "trackId": {
+            "$ref": "#/components/schemas/Id"
+          },
+          "position": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 86400
+          },
+          "queue": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnectTrack"
+            },
+            "minItems": 1,
+            "maxItems": 1000
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 999
+          },
+          "shuffle": {
+            "type": "boolean"
+          },
+          "queueRevision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "append",
+              "next",
+              "remove",
+              "move",
+              "clear",
+              "jump",
+              "shuffle",
+              "repeat",
+              "volume",
+              "mute"
+            ]
+          },
+          "track": {
+            "$ref": "#/components/schemas/ConnectTrack"
+          },
+          "from": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 999
+          },
+          "to": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 999
+          },
+          "value": {
+            "oneOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "off",
+                  "all",
+                  "one"
+                ]
+              }
+            ]
+          },
+          "expiresAt": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "action"
+        ],
+        "description": "Controller requires deviceId. All actions except playQueue require current trackId. playQueue requires queue/index/boolean shuffle and capability playQueue. queueEdit requires queueControl, current queueRevision and operation; see CONNECT.md for operation-specific fields. Server replaces the ID and adds expiresAt when forwarding to the player."
+      },
+      "ConnectAck": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "ack"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "snapshot": {
+            "type": "object",
+            "properties": {
+              "queue": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ConnectTrack"
+                },
+                "minItems": 1,
+                "maxItems": 1000
+              },
+              "index": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 999
+              },
+              "position": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 86400
+              },
+              "repeat": {
+                "type": "string",
+                "enum": [
+                  "off",
+                  "all",
+                  "one"
+                ]
+              }
+            },
+            "required": [
+              "queue",
+              "index",
+              "position",
+              "repeat"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "ok"
+        ],
+        "description": "Use the server-forwarded ID. Publish measured state before acknowledging success. Transfer requires a snapshot and confirmation that the source paused. queueEdit requires a newer state sequence."
+      },
+      "ConnectResult": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "result"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string",
+            "description": "May include DEVICE_OFFLINE, TRACK_CHANGED, QUEUE_CHANGED, INVALID_QUEUE, UNSUPPORTED_COMMAND, DEVICE_BUSY, DEVICE_TIMEOUT, COMMAND_FAILED, TOO_MANY_COMMANDS or DUPLICATE_COMMAND."
+          },
+          "device": {
+            "$ref": "#/components/schemas/ConnectDevice"
+          },
+          "serverTime": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "snapshot": {
+            "type": "object",
+            "properties": {
+              "queue": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ConnectTrack"
+                },
+                "minItems": 1,
+                "maxItems": 1000
+              },
+              "index": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 999
+              },
+              "position": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 86400
+              },
+              "repeat": {
+                "type": "string",
+                "enum": [
+                  "off",
+                  "all",
+                  "one"
+                ]
+              }
+            },
+            "required": [
+              "queue",
+              "index",
+              "position",
+              "repeat"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "ok"
+        ],
+        "description": "Controller result uses its original command ID. Successful seek, playQueue and queueEdit include measured device/serverTime; transfer includes snapshot."
+      },
+      "ConnectReady": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "ready"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "serverTime": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "type",
+          "version",
+          "deviceId",
+          "serverTime"
+        ]
+      },
+      "ConnectHeartbeat": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "heartbeat"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ]
       }
     }
   }

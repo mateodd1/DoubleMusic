@@ -204,3 +204,105 @@ test('Connect: silent device expires, queued commands time out, session revoke c
   f.store.run('DELETE FROM sessions WHERE digest=?', hashToken(newToken)); f.advance(1);
   assert.equal(await live.closed, 4001);
 });
+
+test('Connect: queueControl synchronizes duplicate entries, reconnects controllers and does not repeat full queues on progress', async t => {
+  const f = await fixture(t), token = await f.login(), p = await f.player(token, 'queue-device', ['playQueue', 'queueControl']);
+  const q = [song, { ...song, id: 'local:NEXT' }, song];
+  const full = { ...state(), queue: q, queueRevision: 'revision-1', queueIndex: 0, shuffle: false, repeat: 'off', volume: 0.7, muted: false };
+  p.send({ type: 'state', state: full });
+  const c = await f.controller(token);
+  const d = (await c.next(m => m.type === 'devices')).items[0];
+  assert.ok(d.capabilities.includes('queueControl')); assert.equal(d.state.queueIndex, 0); assert.equal(d.state.queue, undefined);
+  const event = await c.next(m => m.type === 'queue'); assert.deepEqual(event.queue, q); assert.equal(event.revision, 'revision-1');
+  const received = []; c.ws.on('message', raw => received.push(JSON.parse(raw)));
+  const { queue, ...compact } = full;
+  p.send({ type: 'state', state: { ...compact, position: 70 } });
+  const progress = await c.next(m => m.type === 'devices' && m.items[0]?.state.position === 70);
+  assert.equal(progress.items[0].state.queueRevision, 'revision-1'); assert.equal(received.filter(m => m.type === 'queue').length, 0);
+  const stranger = await f.controller(await f.login('bobby'));
+  assert.deepEqual((await stranger.next(m => m.type === 'devices')).items, []);
+  stranger.send({ type: 'command', id: 'steal', action: 'queueEdit', deviceId: p.id, trackId: song.id, queueRevision: 'revision-1', operation: 'clear' });
+  assert.equal((await stranger.next(m => m.type === 'result')).error, 'DEVICE_OFFLINE');
+});
+
+test('Connect: incremental queue edits require current revision, enforce bounds and need a measured state before ACK', async t => {
+  const f = await fixture(t), token = await f.login(), p = await f.player(token, 'queue-device', ['playQueue', 'queueControl']), c = await f.controller(token);
+  await c.next(m => m.type === 'devices');
+  const full = { ...state(), queue: [song, { ...song, id: 'local:NEXT' }, song], queueRevision: 'rev-1', queueIndex: 0, shuffle: false, repeat: 'off', volume: 0.7, muted: false };
+  p.send({ type: 'state', state: full }); await c.next(m => m.type === 'queue');
+  let serial = 0;
+  async function fail(extra, error) {
+    const id = 'invalid-' + serial++;
+    c.send({ type: 'command', id, deviceId: p.id, trackId: song.id, action: 'queueEdit', queueRevision: 'rev-1', ...extra });
+    assert.equal((await c.next(m => m.type === 'result' && m.id === id)).error, error);
+  }
+  await fail({ operation: 'append', track: song, queueRevision: 'outdated' }, 'QUEUE_CHANGED');
+  for (const edit of [{ operation: 'remove', from: 0 }, { operation: 'move', from: 1, to: 0 }, { operation: 'jump', from: 3 }, { operation: 'volume', value: 2 }, { operation: 'repeat', value: 'bad' }, { operation: 'append', track: { id: 'https://secret.invalid' } }]) await fail(edit, 'INVALID_QUEUE');
+  c.send({ type: 'command', id: 'unconfirmed', deviceId: p.id, trackId: song.id, action: 'queueEdit', queueRevision: 'rev-1', operation: 'append', track: song });
+  const bad = await p.next(m => m.type === 'command'); p.send({ type: 'ack', id: bad.id, ok: true });
+  assert.equal((await c.next(m => m.type === 'result' && m.id === 'unconfirmed')).error, 'COMMAND_FAILED');
+  let revision = 'rev-1';
+  for (const edit of [{ operation: 'append', track: song }, { operation: 'next', track: song }, { operation: 'remove', from: 1 }, { operation: 'move', from: 1, to: 2 }, { operation: 'clear' }, { operation: 'jump', from: 2 }, { operation: 'shuffle', value: true }, { operation: 'repeat', value: 'all' }, { operation: 'volume', value: .4 }, { operation: 'mute', value: true }]) {
+    const id = 'edit-' + serial++;
+    c.send({ type: 'command', id, deviceId: p.id, trackId: song.id, action: 'queueEdit', queueRevision: revision, ...edit });
+    const command = await p.next(m => m.type === 'command');
+    assert.equal(command.operation, edit.operation); assert.equal(command.queueRevision, revision); assert.equal(command.trackId, song.id);
+    // A second controller cannot interleave an edit while this device is applying one.
+    if (edit.operation === 'append') {
+      await fail({ operation: 'clear' }, 'DEVICE_BUSY');
+    }
+    revision = 'new-' + serial;
+    p.send({ type: 'state', state: { ...full, queueRevision: revision, position: 42.5 } });
+    p.send({ type: 'ack', id: command.id, ok: true });
+    const result = await c.next(m => m.type === 'result' && m.id === id);
+    assert.equal(result.ok, true); assert.equal(result.device.state.position, 42.5); assert.equal(result.device.state.queueRevision, revision);
+  }
+});
+
+test('Connect: older players reject queue editing without losing ordinary playback control', async t => {
+  const f = await fixture(t), token = await f.login(), p = await f.player(token), c = await f.controller(token);
+  await c.next(m => m.type === 'devices'); p.send({ type: 'state', state: state() }); await c.next(m => m.type === 'devices');
+  c.send({ type: 'command', id: 'unsupported-queue', action: 'queueEdit', deviceId: p.id, trackId: song.id, queueRevision: 'none', operation: 'append', track: song });
+  assert.equal((await c.next(m => m.type === 'result')).error, 'UNSUPPORTED_COMMAND');
+  c.send({ type: 'command', id: 'legacy-pause', action: 'pause', deviceId: p.id, trackId: song.id });
+  const cmd = await p.next(m => m.type === 'command'); p.send({ type: 'state', state: state(false) }); p.send({ type: 'ack', id: cmd.id, ok: true });
+  assert.equal((await c.next(m => m.type === 'result')).ok, true);
+});
+
+test('Connect: synchronized queues and incremental tracks retain only catalog metadata', async t => {
+  const publicUrl = 'https://music.example.test';
+  const f = await fixture(t, { publicUrl }), token = await f.login();
+  const p = await f.player(token, 'metadata-device', ['playQueue', 'queueControl']), c = await f.controller(token);
+  await c.next(m => m.type === 'devices');
+  const unsafe = { ...song, id: 'personal:track-1', coverUrl: 'https://unrelated.example.test/pixel', token: 'private-session', streamUrl: 'https://unrelated.example.test/audio' };
+  const full = { ...state(), queue: [song, unsafe, song], queueRevision: 'metadata-1', queueIndex: 0, shuffle: false, repeat: 'off', volume: 0.7, muted: false };
+  p.send({ type: 'state', state: full });
+  const event = await c.next(m => m.type === 'queue');
+  assert.equal(event.queue[1].coverUrl, ''); assert.equal(event.queue[1].token, undefined); assert.equal(event.queue[1].streamUrl, undefined);
+  assert.equal(event.queue[0].coverUrl, publicUrl + song.coverUrl);
+  c.send({ type: 'command', id: 'sanitized-next', deviceId: p.id, action: 'queueEdit', trackId: song.id, queueRevision: 'metadata-1', operation: 'next', track: unsafe });
+  const command = await p.next(m => m.type === 'command');
+  assert.equal(command.track.id, 'personal:track-1'); assert.equal(command.track.coverUrl, '');
+  assert.equal(command.track.token, undefined); assert.equal(command.track.streamUrl, undefined);
+  p.send({ type: 'state', state: { ...full, queueRevision: 'metadata-2', queue: [song, unsafe, unsafe, song] } });
+  p.send({ type: 'ack', id: command.id, ok: true });
+  const result = await c.next(m => m.type === 'result' && m.id === 'sanitized-next'); assert.equal(result.ok, true);
+  const late = await f.controller(token); await late.next(m => m.type === 'devices');
+  const replay = await late.next(m => m.type === 'queue'); assert.equal(replay.revision, 'metadata-2'); assert.equal(replay.queue.length, 4);
+  p.send({ type: 'state', state: null });
+  await late.next(m => m.type === 'devices' && m.items.length === 0);
+  const after = await f.controller(token); assert.deepEqual((await after.next(m => m.type === 'devices')).items, []);
+});
+
+test('Connect: a published queue revision cannot be reused for different contents', async t => {
+  const f = await fixture(t), token = await f.login(), p = await f.player(token, 'immutable-device', ['queueControl']), c = await f.controller(token);
+  await c.next(m => m.type === 'devices');
+  const full = { ...state(), queue: [song], queueRevision: 'immutable-1', queueIndex: 0, shuffle: false, repeat: 'off', volume: 1, muted: false };
+  p.send({ type: 'state', state: full }); await c.next(m => m.type === 'queue');
+  p.send({ type: 'state', state: { ...full, queue: [song, song] } });
+  assert.equal(await p.closed, 1008);
+  await c.next(m => m.type === 'devices' && m.items.length === 0);
+  const replacement = await f.player(token, 'immutable-device', ['queueControl']);
+  replacement.send({ type: 'state', state: full });
+  assert.equal((await c.next(m => m.type === 'queue')).revision, 'immutable-1');
+});

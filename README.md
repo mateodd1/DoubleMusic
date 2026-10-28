@@ -4,7 +4,7 @@
 
 A server for organizing and playing your music file library from your mobile clients. DoubleMusic indexes a local folder, reads its metadata, and streams audio from your server. You can enable optional external connections through a documented HTTP API.
 
-Features include user accounts with revocable sessions, favorites, personal playlists, saved albums, followed artists, M3U playlists, local artwork and lyrics, byte-range streaming and seeking, and cross-device control through Connect.
+Features include user accounts with revocable sessions, favorites, personal playlists, saved albums, followed artists, M3U playlists, local artwork and lyrics, byte-range streaming and seeking, and cross-device control through Connect, with synchronized queues and optional remote queue editing, shuffle, repeat, volume, and mute.
 
 The local library is the center of the server: browsing, featured content, and search use your files by default and work without Internet access after installation. External connections are optional, disabled by default, and queried explicitly through the API. The project is intended for your own or authorized music and services used with the appropriate permissions; see the [usage scope](docs/USAGE.md). The public core uses Rust with Axum/Tokio and SQLite. A private Node.js 22.13+ worker handles the local catalog, FFmpeg/FFprobe audio processing, and optional external connections. Accounts, sessions, personal libraries, and Connect run natively in Rust. Both processes run in the same Docker container; only the Rust API is exposed. See [runtime architecture and migration](docs/RUNTIME.md).
 
@@ -54,7 +54,7 @@ For the local source, `GET /api/v1/audio/{id}` serves the original file. With `l
 
 In fMP4, `original` quality preserves AAC, ALAC, FLAC, and Opus. Other codecs are converted to AAC at 320 kbps. To always obtain the original bytes, use `quality=original&format=original`. Codec support ultimately depends on the mobile player's capabilities.
 
-This server implements the DuoMusic v1 contract. Clients must allow a configurable service origin and preserve complete `source:id` values; the local library uses `local:`. See [docs/API.md](docs/API.md) for integration details. HTTP tests validate the contract and audio files; they do not replace testing each mobile app version on actual devices.
+This server implements the DuoMusic v1 contract. Clients must allow a configurable service origin and preserve complete `source:id` values; the local library uses `local:`. See [docs/API.md](docs/API.md) and the [Connect protocol](docs/CONNECT.md) for integration details. HTTP tests validate the contract and audio files; they do not replace testing each mobile app version on actual devices.
 
 ## Enabling and disabling features
 

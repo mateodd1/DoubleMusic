@@ -159,11 +159,13 @@ Usernames contain 4 to 64 characters from `A-Za-z0-9_.-`; passwords contain 8 to
 
 ## Connect
 
-WebSocket at `/api/v1/connect`, using the same Bearer and origin. Clients first send `{type:"hello",version:1,role:"player",platform:"ios"|"android",deviceKey:"stable-device-key",name:"My phone",capabilities:["playQueue"]}`. The device key contains 8 to 128 characters from `A-Za-z0-9_-`.
+WebSocket at `/api/v1/connect`, using the same Bearer and origin. Clients first send `{type:"hello",version:1,role:"player",platform:"ios"|"android",deviceKey:"stable-device-key",name:"My phone",capabilities:["playQueue","queueControl"]}`. The device key contains 8 to 128 characters from `A-Za-z0-9_-`.
 
 The server responds with `ready`. Players publish `{type:"state",state:{track,position,duration,playing,buffering,canNext}}`. Here, `track` contains `{id,title,artist,album,artistId,albumId,coverUrl,duration}`. Times are measured in seconds.
 
-Controllers start with `{type:"hello",version:1,role:"controller"}` and receive `devices`. They send `{type:"command",id:"command-id",deviceId,action,trackId?,position?}`. Actions are `play`, `pause`, `next`, `previous`, `seek`, `transfer`, and `playQueue`. The last action includes `{queue:[track],index,shuffle}`. The player executes the command and acknowledges it with `{type:"ack",id,ok}`; a transfer also includes `snapshot:{queue,index,position,repeat}` after pausing. The controller receives `result`.
+Controllers start with `{type:"hello",version:1,role:"controller"}` and receive `devices`. They send `{type:"command",id:"command-id",deviceId,action,trackId?,position?}`. Actions are `play`, `pause`, `next`, `previous`, `seek`, `transfer`, `playQueue`, and `queueEdit`. `playQueue` includes `{queue:[track],index,shuffle}`. The player executes the command and acknowledges it with `{type:"ack",id,ok}`; a transfer also includes `snapshot:{queue,index,position,repeat}` after pausing. The controller receives `result`.
+
+The optional `queueControl` capability adds revisioned queue events and incremental edits: append/next/remove/move/clear/jump, shuffle, repeat, player volume and mute. Full queues travel only when changed or when a controller connects; progress reports stay compact. Queue edits require the current track and queue revision and a newer player state before a successful ACK. See the complete [Connect protocol](CONNECT.md) for payloads, limits, errors and mobile client requirements.
 
 Presence is kept only in memory and is scoped to each account. Web controllers sending `Origin` must be allowed by `ALLOWED_ORIGINS`; native clients use Bearer authentication. Connect tests cover reconnection, expiration, acknowledgements, and queue transfers.
 
@@ -172,6 +174,8 @@ Presence is kept only in memory and is scoped to each account. Web controllers s
 ```json
 {"error":"NOT_FOUND","message":"Resource not found.","requestId":"uuid"}
 ```
+
+Clients must preserve session tokens and local library mirrors on network failures, `429`, or `5xx` and respect `Retry-After`. These errors do not mean the session expired; confirm authentication rather than sending the user to login.
 
 Main statuses: `400` invalid request, `401` invalid session, `403` insufficient permissions, `404` missing resource, `409` order or revision conflict, `413` limit exceeded, `416` invalid range, `422` unsupported file or format, `429` rate limit, and `503` a full conversion queue.
 

@@ -1,6 +1,6 @@
 # Rust core and catalog worker
 
-DoubleMusic 1.3 runs a Rust HTTP and WebSocket core with Axum/Tokio. The migration follows the identity, library, and Connect implementation in the source server and adapts it to DoubleMusic's local catalog and generic extension contract.
+DoubleMusic 1.4 runs a Rust HTTP and WebSocket core with Axum/Tokio. The migration follows the identity, library, and Connect implementation in the source server and adapts it to DoubleMusic's local catalog and generic extension contract.
 
 | Responsibility | Runtime |
 | --- | --- |
@@ -51,9 +51,9 @@ npm test
 RUST_CORE_BIN="$PWD/core-rust/target/release/doublemusic-core" CONNECT_DISABLED=true npm test
 ```
 
-The HTTP/WebSocket contract tests can run against either runtime using isolated temporary SQLite files and generated audio. One Node test uses its injected clock; Rust's native tests cover timeouts, stale presence, session revocation, admission limits, bounded message queues, and slow consumers with a controlled clock. No real music accounts or external platforms are needed. After `docker build -t doublemusic:test .`, `npm run test:container` checks managed startup, loopback isolation, read-only execution, account/session persistence, graceful shutdown, and worker failure handling. Docker contract tests run with networking disabled, permitting only loopback communication between the test processes.
+The HTTP/WebSocket contract tests can run against either runtime using isolated temporary SQLite files and generated audio. One Node test uses its injected clock; Rust's native tests cover timeouts, stale presence, session revocation, admission limits, bounded message queues, synchronized playback queues, and slow consumers with a controlled clock. No real music accounts or external platforms are needed. After `docker build -t doublemusic:test .`, `npm run test:container` checks managed startup, loopback isolation, read-only execution, account/session persistence, graceful shutdown, and worker failure handling. Docker contract tests run with networking disabled, permitting only loopback communication between the test processes.
 
-Rust performs SQLite work on a dedicated thread with a bounded queue and scrypt work on blocking threads with bounded concurrency. Write transactions use `BEGIN IMMEDIATE`; the shared database uses WAL and a five-second busy timeout. Internal catalog JSON responses are limited to 16 MiB. Connect limits connections to 512 globally and 16 per account, queues to 1,000 tracks, messages and outbound buffering to 2 MiB, and commands to eight pending requests per controller.
+Rust performs SQLite work on a dedicated thread with a bounded queue and scrypt work on blocking threads with bounded concurrency. Write transactions use `BEGIN IMMEDIATE`; the shared database uses WAL and a five-second busy timeout. Internal catalog JSON responses are limited to 16 MiB. Connect limits connections to 512 globally and 16 per account, queues to 1,000 tracks, messages and outbound buffering to 2 MiB, retained playback queue JSON to 16 MiB globally, and commands to eight pending requests per controller. Full playback queues are sent only after revision changes or controller connections; progress updates contain compact state. See [CONNECT.md](CONNECT.md).
 
 ## Advanced runtime settings
 

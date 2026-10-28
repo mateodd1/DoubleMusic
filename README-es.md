@@ -2,7 +2,7 @@
 
 Servidor para organizar y reproducir tu biblioteca de archivos de música desde tus clientes móviles. DoubleMusic indexa una carpeta local, lee sus metadatos y sirve el audio desde tu servidor. Puedes habilitar conexiones externas opcionales mediante una API HTTP documentada.
 
-Incluye usuarios con sesiones revocables, favoritos, playlists personales, álbumes guardados, artistas seguidos, playlists M3U, portadas y letras locales, streaming con saltos por rangos de bytes y control entre dispositivos mediante Connect.
+Incluye usuarios con sesiones revocables, favoritos, playlists personales, álbumes guardados, artistas seguidos, playlists M3U, portadas y letras locales, streaming con saltos por rangos de bytes y control entre dispositivos mediante Connect, con colas sincronizadas y edición remota, aleatorio, repetición, volumen y silencio si el cliente anuncia soporte. Consulta [el protocolo Connect](docs/CONNECT.md).
 
 La biblioteca local es el centro del servidor: el catálogo, la portada y la búsqueda utilizan tus archivos por defecto y funcionan sin acceso a Internet una vez instalado. Las conexiones externas son optativas, están desactivadas por defecto y se consultan expresamente por API. El proyecto está orientado a música propia o autorizada y a servicios utilizados con los permisos correspondientes; consulta [el alcance de uso](docs/USAGE.md). El núcleo público utiliza Rust, Axum/Tokio y SQLite para cuentas, sesiones, bibliotecas personales y Connect. Un proceso Node.js 22.13+ privado conserva el catálogo local, FFmpeg/FFprobe y las conexiones externas optativas. Ambos se ejecutan en el mismo contenedor Docker; solo se expone Rust. Consulta [la arquitectura y migración](docs/RUNTIME.md).
 

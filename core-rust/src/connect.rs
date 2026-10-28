@@ -22,6 +22,7 @@ use tokio::sync::{Mutex, OwnedSemaphorePermit, Semaphore, mpsc, watch};
 const MAX_MESSAGE: usize = 2 * 1024 * 1024;
 const STALE_MS: i64 = 20000;
 const COMMAND_MS: i64 = 5000;
+const MAX_QUEUE_STORAGE: usize = 16 * 1024 * 1024;
 #[derive(Clone)]
 struct Options {
     now: Arc<dyn Fn() -> i64 + Send + Sync>,
@@ -111,6 +112,8 @@ struct Peer {
     name: String,
     capabilities: Vec<&'static str>,
     state: Option<Value>,
+    queue: Option<Value>,
+    queue_bytes: usize,
     updated_at: i64,
     sequence: u64,
     visible: bool,
@@ -134,6 +137,7 @@ struct Pending {
     target: String,
     action: String,
     track_id: String,
+    state_sequence: u64,
     expires_at: i64,
 }
 struct Hub {
@@ -265,6 +269,8 @@ impl Connect {
                 name: String::new(),
                 capabilities: vec![],
                 state: None,
+                queue: None,
+                queue_bytes: 0,
                 updated_at: 0,
                 sequence: 0,
                 visible: false,
@@ -569,11 +575,10 @@ impl Hub {
                 {
                     return Err(());
                 }
-                if c.iter().any(|v| v == "playQueue") {
-                    vec!["playQueue"]
-                } else {
-                    vec![]
-                }
+                ["playQueue", "queueControl"]
+                    .into_iter()
+                    .filter(|name| c.iter().any(|v| v == name))
+                    .collect()
             } else {
                 vec![]
             };
@@ -611,15 +616,34 @@ impl Hub {
             let user = peer.user.clone();
             let out = peer.out.clone();
             out.json(json!({"type":"devices","items":self.devices(&user,now),"serverTime":now}));
+            for peer in self
+                .peers
+                .values()
+                .filter(|p| p.user == user && p.live(now))
+            {
+                if let Some(q) = &peer.queue {
+                    out.json(json!({"type":"queue","deviceId":peer.id,"revision":q["revision"],"queue":q["queue"]}));
+                }
+            }
         }
         Ok(())
     }
     fn state(&mut self, id: &str, m: &Value, size: usize, now: i64) -> std::result::Result<(), ()> {
-        if size > 16384 {
+        let s = m.get("state").ok_or(())?;
+        let extended = self.peers[id].capabilities.contains(&"queueControl");
+        if size > if extended { MAX_MESSAGE - 1024 } else { 16384 } {
             return Err(());
         }
-        let s = m.get("state").ok_or(())?;
+        let stored_bytes: usize = if s.get("queue").is_some() {
+            self.peers.values().map(|p| p.queue_bytes).sum()
+        } else {
+            0
+        };
+        let mut changed = false;
         let state = if s.is_null() {
+            let p = self.peers.get_mut(id).ok_or(())?;
+            p.queue = None;
+            p.queue_bytes = 0;
             None
         } else {
             let position = seconds(&s["position"]).ok_or(())?;
@@ -627,10 +651,70 @@ impl Hub {
             let playing = s["playing"].as_bool().ok_or(())?;
             let track = track(&s["track"], &self.public_url)?;
             let p = self.peers.get_mut(id).ok_or(())?;
+            let mut extra = json!({});
+            if extended && !s["queueRevision"].is_null() {
+                let revision = s["queueRevision"]
+                    .as_str()
+                    .filter(|v| identifier(v, 1, 64))
+                    .ok_or(())?;
+                if s.get("queue").is_some() {
+                    let mut q = queue(
+                        &json!({"queue":s["queue"],"index":s["queueIndex"]}),
+                        &self.public_url,
+                    )?;
+                    q["revision"] = json!(revision);
+                    // A revision identifies an immutable ordered queue, including duplicates.
+                    if let Some(old) = &p.queue
+                        && old["revision"] == revision
+                        && old["queue"] != q["queue"]
+                    {
+                        return Err(());
+                    }
+                    changed = p
+                        .queue
+                        .as_ref()
+                        .is_none_or(|old| old["revision"] != revision);
+                    let bytes = q.to_string().len();
+                    if stored_bytes - p.queue_bytes + bytes > MAX_QUEUE_STORAGE {
+                        return Err(());
+                    }
+                    p.queue_bytes = bytes;
+                    p.queue = Some(q);
+                }
+                let q = p
+                    .queue
+                    .as_ref()
+                    .filter(|q| q["revision"] == revision)
+                    .ok_or(())?;
+                let index = s["queueIndex"]
+                    .as_u64()
+                    .filter(|i| (*i as usize) < q["queue"].as_array().unwrap().len())
+                    .ok_or(())?;
+                if q["queue"][index as usize]["id"] != track["id"] {
+                    return Err(());
+                }
+                let shuffle = s["shuffle"].as_bool().ok_or(())?;
+                let repeat = s["repeat"]
+                    .as_str()
+                    .filter(|v| ["off", "all", "one"].contains(v))
+                    .ok_or(())?;
+                let volume = s["volume"]
+                    .as_f64()
+                    .filter(|v| v.is_finite() && (0.0..=1.0).contains(v))
+                    .ok_or(())?;
+                let muted = s["muted"].as_bool().ok_or(())?;
+                extra = json!({"queueRevision":revision,"queueIndex":index,"shuffle":shuffle,"repeat":repeat,"volume":volume,"muted":muted});
+            } else {
+                p.queue = None;
+                p.queue_bytes = 0;
+            }
             p.sequence += 1;
-            Some(
-                json!({"track":track,"position":if duration==0.0{position}else{position.min(duration)},"duration":duration,"playing":playing,"buffering":s["buffering"]==true,"canNext":s["canNext"]==true,"updatedAt":now,"sequence":p.sequence}),
-            )
+            let mut state = json!({"track":track,"position":if duration==0.0{position}else{position.min(duration)},"duration":duration,"playing":playing,"buffering":s["buffering"]==true,"canNext":s["canNext"]==true,"updatedAt":now,"sequence":p.sequence});
+            state
+                .as_object_mut()
+                .unwrap()
+                .extend(extra.as_object().unwrap().clone());
+            Some(state)
         };
         let p = self.peers.get_mut(id).ok_or(())?;
         p.visible = state.is_some();
@@ -639,7 +723,23 @@ impl Hub {
         }
         p.state = state;
         let user = p.user.clone();
+        let update = if changed {
+            p.queue.as_ref().map(|q| json!({"type":"queue","deviceId":id,"revision":q["revision"],"queue":q["queue"]}))
+        } else {
+            None
+        };
         self.broadcast(&user, now);
+        // Full queues travel only on changes and controller connection, never on heartbeats.
+        if let Some(update) = update {
+            let message: Utf8Bytes = update.to_string().into();
+            for c in self
+                .peers
+                .values()
+                .filter(|c| c.user == user && c.role.as_deref() == Some("controller"))
+            {
+                c.out.send(Message::Text(message.clone()));
+            }
+        }
         Ok(())
     }
     fn command(
@@ -664,11 +764,12 @@ impl Hub {
                     "seek",
                     "transfer",
                     "playQueue",
+                    "queueEdit",
                 ]
                 .contains(s)
             })
             .ok_or(())?;
-        if action != "playQueue" && size > 2048 {
+        if !["playQueue", "queueEdit"].contains(&action) && size > 2048 {
             return Err(());
         }
         let p = self.peers.get_mut(id).ok_or(())?;
@@ -706,6 +807,28 @@ impl Hub {
             fail("TRACK_CHANGED");
             return Ok(());
         }
+        let edit = if action == "queueEdit" {
+            if !target.capabilities.contains(&"queueControl") || target.queue.is_none() {
+                fail("UNSUPPORTED_COMMAND");
+                return Ok(());
+            }
+            if m["queueRevision"] != target_state["queueRevision"] {
+                fail("QUEUE_CHANGED");
+                return Ok(());
+            }
+            let Ok(edit) = queue_edit(
+                m,
+                target.queue.as_ref().unwrap(),
+                target_state,
+                &self.public_url,
+            ) else {
+                fail("INVALID_QUEUE");
+                return Ok(());
+            };
+            Some(edit)
+        } else {
+            None
+        };
         let queue = if action == "playQueue" {
             if !target.capabilities.contains(&"playQueue") {
                 fail("UNSUPPORTED_COMMAND");
@@ -734,11 +857,13 @@ impl Hub {
             fail("INVALID_POSITION");
             return Ok(());
         }
-        if self
-            .pending
-            .values()
-            .any(|p| p.target == target.id && (p.action == "transfer" || action == "transfer"))
-        {
+        if self.pending.values().any(|p| {
+            p.target == target.id
+                && (p.action == "transfer"
+                    || action == "transfer"
+                    || p.action == "queueEdit"
+                    || action == "queueEdit")
+        }) {
             fail("DEVICE_BUSY");
             return Ok(());
         }
@@ -765,6 +890,12 @@ impl Hub {
         if action == "seek" {
             command["position"] = m["position"].clone();
         }
+        if let Some(edit) = edit {
+            command
+                .as_object_mut()
+                .unwrap()
+                .extend(edit.as_object().unwrap().clone());
+        }
         self.pending.insert(
             command_id,
             Pending {
@@ -773,6 +904,7 @@ impl Hub {
                 target: target.id.clone(),
                 action: action.into(),
                 track_id,
+                state_sequence: target.sequence,
                 expires_at,
             },
         );
@@ -807,6 +939,10 @@ impl Hub {
             self.finish(command_id, json!({"ok":false,"error":"COMMAND_FAILED"}));
             return Ok(());
         }
+        if item.action == "queueEdit" && p.sequence <= item.state_sequence {
+            self.finish(command_id, json!({"ok":false,"error":"COMMAND_FAILED"}));
+            return Ok(());
+        }
         let mut result = json!({"ok":true});
         if item.action == "transfer" {
             let s = &m["snapshot"];
@@ -831,7 +967,7 @@ impl Hub {
             }
             result["snapshot"] = snapshot;
         }
-        if item.action == "seek" {
+        if ["seek", "queueEdit", "playQueue"].contains(&item.action.as_str()) {
             if p.live(now) {
                 result["device"] = p.device();
             }
@@ -840,6 +976,65 @@ impl Hub {
         self.finish(command_id, result);
         Ok(())
     }
+}
+// Queue edits are incremental and guarded by both track and revision. No replay after a timeout.
+fn queue_edit(
+    m: &Value,
+    q: &Value,
+    state: &Value,
+    public_url: &str,
+) -> std::result::Result<Value, ()> {
+    let op = m["operation"].as_str().ok_or(())?;
+    let n = q["queue"].as_array().ok_or(())?.len();
+    let current = state["queueIndex"].as_u64().ok_or(())? as usize;
+    let index = |key: &str| m[key].as_u64().filter(|i| (*i as usize) < n).ok_or(());
+    let mut edit = json!({"operation":op,"queueRevision":m["queueRevision"]});
+    match op {
+        "append" | "next" => {
+            if n >= 1000 {
+                return Err(());
+            }
+            edit["track"] = track(&m["track"], public_url)?;
+        }
+        "remove" | "jump" => {
+            let i = index("from")?;
+            if op == "remove" && i as usize <= current {
+                return Err(());
+            }
+            edit["from"] = json!(i);
+        }
+        "move" => {
+            let from = index("from")?;
+            let to = index("to")?;
+            if from as usize <= current || to as usize <= current {
+                return Err(());
+            }
+            edit["from"] = json!(from);
+            edit["to"] = json!(to);
+        }
+        "clear" => {}
+        "shuffle" | "mute" => {
+            edit["value"] = json!(m["value"].as_bool().ok_or(())?);
+        }
+        "repeat" => {
+            edit["value"] = json!(
+                m["value"]
+                    .as_str()
+                    .filter(|v| ["off", "all", "one"].contains(v))
+                    .ok_or(())?
+            );
+        }
+        "volume" => {
+            edit["value"] = json!(
+                m["value"]
+                    .as_f64()
+                    .filter(|v| v.is_finite() && (0.0..=1.0).contains(v))
+                    .ok_or(())?
+            );
+        }
+        _ => return Err(()),
+    }
+    Ok(edit)
 }
 fn identifier(s: &str, min: usize, max: usize) -> bool {
     s.len() >= min
