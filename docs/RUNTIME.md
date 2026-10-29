@@ -23,6 +23,10 @@ The existing `docker-compose.yml`, `.env`, `SOURCES_FILE`, read-only music mount
 
 Administrative commands remain available through `docker compose exec doublemusic node cli.js ...`. The CLI and worker read the same SQLite file as Rust.
 
+## Native Linux packages
+
+DEB/RPM packages install the same core and private worker under `/usr/lib/doublemusic`, with a bundled Node runtime and a systemd service running as `doublemusic`. The Rust binary is statically linked with musl; FFmpeg comes from the distribution. Package launchers set the working directory and runtime path and load `/etc/doublemusic/doublemusic.env`. State defaults to `/var/lib/doublemusic`. See [INSTALL.md](INSTALL.md) for installation and upgrade behavior.
+
 ## Existing installations
 
 Before upgrading, stop the service and back up its complete data volume and current image/configuration. Do not copy an active SQLite database without its WAL state. Then run:

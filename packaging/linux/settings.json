@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "library": { "enabled": true },
+  "external": { "enabled": false }
+}

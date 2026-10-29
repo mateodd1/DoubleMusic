@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+if command -v adduser >/dev/null 2>&1 && [ -f /etc/debian_version ]; then
+    getent group doublemusic >/dev/null || addgroup --system doublemusic
+    getent passwd doublemusic >/dev/null || adduser --system --ingroup doublemusic --home /var/lib/doublemusic --no-create-home --shell /usr/sbin/nologin doublemusic
+else
+    getent group doublemusic >/dev/null || groupadd --system doublemusic
+    getent passwd doublemusic >/dev/null || useradd --system --gid doublemusic --home-dir /var/lib/doublemusic --no-create-home --shell /sbin/nologin doublemusic
+fi

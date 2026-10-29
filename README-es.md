@@ -6,6 +6,10 @@ Incluye usuarios con sesiones revocables, favoritos, playlists personales, álbu
 
 La biblioteca local es el centro del servidor: el catálogo, la portada y la búsqueda utilizan tus archivos por defecto y funcionan sin acceso a Internet una vez instalado. Las conexiones externas son optativas, están desactivadas por defecto y se consultan expresamente por API. El proyecto está orientado a música propia o autorizada y a servicios utilizados con los permisos correspondientes; consulta [el alcance de uso](docs/USAGE.md). El núcleo público utiliza Rust, Axum/Tokio y SQLite para cuentas, sesiones, bibliotecas personales y Connect. Un proceso Node.js 22.13+ privado conserva el catálogo local, FFmpeg/FFprobe y las conexiones externas optativas. Ambos se ejecutan en el mismo contenedor Docker; solo se expone Rust. Consulta [la arquitectura y migración](docs/RUNTIME.md).
 
+## Instalación
+
+Las imágenes Docker y los paquetes DEB/RPM para x86-64 y ARM64 se publican en [GitHub Releases](https://github.com/mateodd1/DoubleMusic/releases). Consulta [la guía de instalación en Linux](docs/INSTALL.md) para configurar el servicio, crear cuentas y actualizar. Los paquetes incluyen su runtime privado de Node y utilizan FFmpeg de la distribución.
+
 ## Inicio con Docker
 
 ```bash

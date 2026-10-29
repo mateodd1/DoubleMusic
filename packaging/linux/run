@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+config=${DOUBLEMUSIC_CONFIG:-/etc/doublemusic/doublemusic.env}
+if [ ! -r "$config" ]; then
+    printf 'Cannot read configuration: %s\n' "$config" >&2
+    exit 1
+fi
+set -a
+. "$config"
+set +a
+export PATH="/usr/lib/doublemusic/runtime:$PATH"
+cd /usr/lib/doublemusic/app
+command=${1:-server}
+shift || true
+case "$command" in
+    server) exec /usr/lib/doublemusic/bin/doublemusic-core "$@" ;;
+    user) exec /usr/lib/doublemusic/runtime/node cli.js "$@" ;;
+    *) printf 'Unknown command: %s\n' "$command" >&2; exit 1 ;;
+esac

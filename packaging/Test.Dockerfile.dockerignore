@@ -1,0 +1,7 @@
+**
+!dist/
+!dist/*.deb
+!dist/*.rpm
+!packaging/
+!packaging/test-install.sh
+!packaging/Test.Dockerfile

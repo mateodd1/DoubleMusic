@@ -1,0 +1,34 @@
+[Unit]
+Description=DoubleMusic music library server
+Documentation=https://github.com/mateodd1/DoubleMusic
+After=network.target
+
+[Service]
+Type=simple
+User=doublemusic
+Group=doublemusic
+WorkingDirectory=/usr/lib/doublemusic/app
+EnvironmentFile=/etc/doublemusic/doublemusic.env
+ExecStart=/usr/bin/doublemusic-server
+Restart=on-failure
+RestartSec=3s
+TimeoutStopSec=40s
+StateDirectory=doublemusic
+StateDirectoryMode=0750
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+ReadWritePaths=/var/lib/doublemusic
+
+[Install]
+WantedBy=multi-user.target
